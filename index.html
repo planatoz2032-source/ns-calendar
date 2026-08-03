@@ -35,6 +35,7 @@
   #topHeader h1{font-size:18px; margin:0;}
   #topHeader .nav-row{display:flex; align-items:center; justify-content:center; gap:18px; padding:8px 0 4px; font-size:15px; font-weight:600;}
   #topHeader .nav-row button{background:none; border:none; font-size:18px; color:var(--sub); cursor:pointer; padding:4px 10px;}
+  #topHeader .today-btn{font-size:12px !important; font-weight:600; border:1px solid var(--border) !important; border-radius:999px; padding:4px 10px !important;}
 
   .chips{display:flex; gap:8px; padding:10px 16px;}
   .chip{flex:1; text-align:center; padding:8px 0; border-radius:10px; border:1px solid var(--border); background:var(--bg); font-size:13px; font-weight:600; cursor:pointer; color:var(--sub);}
@@ -48,6 +49,11 @@
 
   /* mini / month calendar grid */
   .cal-grid{background:var(--card); border-radius:16px; padding:12px; margin:8px 0 14px; border:1px solid var(--border);}
+  .cal-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .cal-head .cal-nav-left{display:flex; align-items:center; gap:4px;}
+  .cal-head .cal-title{font-size:13px; font-weight:700; color:var(--text);}
+  .cal-head .cal-nav-btn{background:none; border:none; font-size:16px; color:var(--sub); cursor:pointer; padding:2px 6px;}
+  .cal-head .cal-toggle{background:none; border:none; font-size:12px; color:var(--sub); cursor:pointer; padding:4px 6px;}
   .cal-wd{display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:11px; color:var(--sub); margin-bottom:4px;}
   .cal-days{display:grid; grid-template-columns:repeat(7,1fr); gap:2px;}
   .cal-cell{aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border-radius:10px; cursor:pointer; font-size:13px; color:var(--text); position:relative;}
@@ -71,8 +77,12 @@
   .card .row-item{display:flex; align-items:flex-start; gap:6px; font-size:12.5px; padding:4px 0; border-bottom:1px dashed var(--border);}
   .card .row-item:last-child{border-bottom:none;}
   .card .row-item .rt{color:var(--sub); flex:0 0 auto; font-size:11.5px; padding-top:1px;}
+  .card .row-item .rbody{flex:1; min-width:0;}
   .card .row-item .rtitle{flex:1; word-break:break-word;}
+  .card .row-item .rmemo{font-size:11px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;}
   .card .row-item.done .rtitle{text-decoration:line-through; color:var(--done);}
+  .star-btn{background:none; border:none; cursor:pointer; font-size:14px; line-height:1; padding:0 2px; flex:0 0 auto; color:#d0d3da;}
+  .star-btn.important{color:#f5b400;}
   .card .empty-mini{font-size:12px; color:var(--sub); padding:8px 0;}
   .card .card-list{max-height:230px; overflow-y:auto;}
   .cb-mini{width:15px; height:15px; border-radius:50%; border:2px solid var(--todo); flex:0 0 15px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:9px; color:#fff; margin-top:1px;}
@@ -94,6 +104,8 @@
   .item .title{font-size:14.5px; font-weight:600; line-height:1.4; word-break:break-word;}
   .item.done .title{text-decoration:line-through; color:var(--done);}
   .item .meta{font-size:11.5px; color:var(--sub); margin-top:3px; display:flex; gap:7px; flex-wrap:wrap; align-items:center;}
+  .item .memo-preview{font-size:12px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:3px;}
+  .star-btn.big{font-size:18px; padding:0 4px;}
   .tag{font-size:10.5px; padding:2px 6px; border-radius:6px; font-weight:700;}
   .tag.work{background:#e8f0fe; color:var(--work);}
   .tag.personal{background:#e3faf1; color:var(--personal);}
@@ -163,6 +175,17 @@
   .btn-ghost{background:var(--bg); color:var(--text);}
   .btn-danger{background:#fde8e8; color:#c0392b;}
   .settings-note{font-size:12px; color:var(--sub); line-height:1.6; margin-top:10px;}
+  .back-btn{background:none; border:none; font-size:18px; color:var(--text); cursor:pointer; padding:4px 8px 4px 0;}
+  .add-recurring-btn{width:100%; padding:12px; border-radius:12px; border:1px dashed var(--work); background:#eef2ff; color:var(--work); font-size:14px; font-weight:700; cursor:pointer; margin:10px 0 16px;}
+  .settings-link-card{display:flex; align-items:center; justify-content:space-between; background:var(--card); border:1px solid var(--border); border-radius:14px; padding:13px 15px; cursor:pointer; margin-top:14px;}
+  .settings-link-card .l-title{font-size:14px; font-weight:700;}
+  .settings-link-card .l-sub{font-size:11.5px; color:var(--sub); margin-top:2px;}
+
+  .accordion-section{border:1px solid var(--border); border-radius:14px; margin-bottom:10px; overflow:hidden; background:var(--card);}
+  .accordion-header{width:100%; display:flex; align-items:center; justify-content:space-between; background:var(--bg); border:none; padding:12px 14px; font-size:14px; font-weight:700; cursor:pointer; color:var(--text); text-align:left;}
+  .accordion-count{font-size:11px; font-weight:700; color:var(--sub); background:var(--card); border:1px solid var(--border); border-radius:999px; padding:1px 7px; margin-left:6px;}
+  .accordion-caret{color:var(--sub); font-size:12px;}
+  .accordion-body{padding:8px 10px 2px;}
   a{color:inherit;}
 </style>
 </head>
@@ -177,6 +200,7 @@
 <main class="screen" id="screenSchedule" hidden></main>
 <main class="screen" id="screenTodo" hidden></main>
 <main class="screen" id="screenSettings" hidden></main>
+<main class="screen" id="screenRecurring" hidden></main>
 </div>
 
 <nav id="bottomNav">
@@ -246,6 +270,57 @@
   </div>
 </div>
 
+<!-- Recurring todo template add/edit sheet -->
+<div class="sheet-backdrop" id="recurringBackdrop">
+  <div class="sheet">
+    <h2 id="recurringSheetTitle">정기 할일 추가</h2>
+
+    <div class="field">
+      <label>구분</label>
+      <div class="seg" id="rCalSeg">
+        <button data-v="work" class="active">회사</button>
+        <button data-v="personal">개인</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>반복 주기</label>
+      <div class="seg" id="rRepeatSeg">
+        <button data-v="monthly" class="active">매월</button>
+        <button data-v="yearly">매년</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>제목</label>
+      <input type="text" id="r-title" placeholder="예: 관리비 납부">
+    </div>
+
+    <div class="row2">
+      <div class="field" id="r-month-field" style="display:none;">
+        <label>월</label>
+        <input type="text" id="r-month" placeholder="예: 3" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label>일</label>
+        <input type="text" id="r-day" placeholder="예: 5" inputmode="numeric">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>메모 (선택)</label>
+      <textarea id="r-memo" rows="2" placeholder="참고사항"></textarea>
+    </div>
+    <div class="settings-note">해당 월(또는 해당 날짜)이 되면 할일 목록에 자동으로 추가돼요. 완료 체크는 항목마다 따로 남아요.</div>
+
+    <div class="sheet-actions">
+      <button class="btn-ghost" onclick="closeRecurringSheet()">취소</button>
+      <button class="btn-danger" id="rDeleteBtn" style="display:none;" onclick="deleteCurrentRecurring()">삭제</button>
+      <button class="btn-primary" onclick="saveRecurringItem()">저장</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const STORAGE_KEY = 'ns_dashboard_items_v2';
 const SETTINGS_KEY = 'ns_dashboard_settings_v1';
@@ -274,6 +349,12 @@ if(items === null){
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
 if(!settings.work) settings.work = 'ns.cho@thebuilders.co.kr';
 if(!settings.personal) settings.personal = 'planatoz2032@gmail.com';
+if(!settings.clientId) settings.clientId = '860343908563-bktcmuc715dq7g18t0frmkraersltbgg.apps.googleusercontent.com';
+if(settings.homeCollapsed === undefined) settings.homeCollapsed = true;
+
+const RECURRING_KEY = 'ns_recurring_templates_v1';
+let recurringTemplates = JSON.parse(localStorage.getItem(RECURRING_KEY) || '[]');
+function persistRecurring(){ localStorage.setItem(RECURRING_KEY, JSON.stringify(recurringTemplates)); }
 
 let currentTab = 'home';
 let currentFilter = 'all'; // all | work | personal
@@ -487,6 +568,11 @@ function renderHeader(){
         <button onclick="shiftDate(-1)">‹</button>
         <span>${label}</span>
         <button onclick="shiftDate(1)">›</button>
+        <button class="today-btn" onclick="goToday()">오늘</button>
+      </div>`;
+  } else if(currentTab==='recurring'){
+    h.innerHTML = `<div class="title-row">
+        <h1><button class="back-btn" onclick="currentTab='settings'; renderAll();">‹</button>🔁 정기 할일 관리</h1>
       </div>`;
   } else {
     const titles = {home:'📅 My Planner', todo:'✅ 할일', settings:'⚙️ 설정'};
@@ -515,6 +601,20 @@ function shiftDate(dir){
     else if(scheduleView==='week') selectedDate = addDays(selectedDate, dir*7);
     else { const d=parseDate(selectedDate); d.setMonth(d.getMonth()+dir); selectedDate = toDateStr(d); }
   }
+  renderAll();
+}
+function goToday(){
+  selectedDate = todayStr();
+  renderAll();
+}
+function shiftMiniMonth(dir){
+  const d = parseDate(selectedDate);
+  const day = d.getDate();
+  d.setDate(1);
+  d.setMonth(d.getMonth()+dir);
+  const dim = new Date(d.getFullYear(), d.getMonth()+1, 0).getDate();
+  d.setDate(Math.min(day, dim));
+  selectedDate = toDateStr(d);
   renderAll();
 }
 
@@ -547,7 +647,7 @@ function renderViewTabs(){
 function renderHome(){
   const el = document.getElementById('screenHome');
   el.innerHTML = '';
-  el.appendChild(buildMiniCalendar());
+  el.appendChild(buildMiniCalendar(true));
 
   const showWork = currentFilter!=='personal';
   const showPersonal = currentFilter!=='work';
@@ -565,7 +665,8 @@ function renderHome(){
   el.appendChild(quad);
 }
 
-function buildMiniCalendar(){
+function buildMiniCalendar(allowCollapse){
+  const collapsed = allowCollapse && settings.homeCollapsed;
   const wrap = document.createElement('div');
   wrap.className = 'cal-grid';
   const cur = parseDate(selectedDate);
@@ -574,12 +675,39 @@ function buildMiniCalendar(){
   const startOffset = (firstOfMonth.getDay()+6)%7; // Monday=0
   const gridStart = new Date(year, month, 1-startOffset);
 
+  const head = document.createElement('div'); head.className='cal-head';
+  const navLeft = document.createElement('div'); navLeft.className='cal-nav-left';
+  const prevBtn = document.createElement('button'); prevBtn.className='cal-nav-btn'; prevBtn.textContent='‹';
+  prevBtn.onclick = ()=> shiftMiniMonth(-1);
+  const titleSpan = document.createElement('span'); titleSpan.className='cal-title';
+  titleSpan.textContent = year+'년 '+(month+1)+'월';
+  const nextBtn = document.createElement('button'); nextBtn.className='cal-nav-btn'; nextBtn.textContent='›';
+  nextBtn.onclick = ()=> shiftMiniMonth(1);
+  navLeft.appendChild(prevBtn); navLeft.appendChild(titleSpan); navLeft.appendChild(nextBtn);
+  head.appendChild(navLeft);
+  if(allowCollapse){
+    const toggle = document.createElement('button'); toggle.className='cal-toggle';
+    toggle.textContent = collapsed ? '펼치기 ▾' : '접기 ▴';
+    toggle.onclick = ()=>{ settings.homeCollapsed = !settings.homeCollapsed; saveSettingsToStorage(); renderAll(); };
+    head.appendChild(toggle);
+  }
+  wrap.appendChild(head);
+
   const wdRow = document.createElement('div'); wdRow.className='cal-wd';
   ['월','화','수','목','금','토','일'].forEach(w=>{ const s=document.createElement('div'); s.textContent=w; wdRow.appendChild(s); });
   wrap.appendChild(wdRow);
 
+  // pick which day-cells to render: full 42-cell grid, or just the single
+  // week row that contains selectedDate when the mini calendar is collapsed
+  let startIdx = 0, count = 42;
+  if(collapsed){
+    const selIdx = Math.round((parseDate(selectedDate) - gridStart) / 86400000);
+    const weekIdx = Math.floor(selIdx/7);
+    startIdx = weekIdx*7; count = 7;
+  }
+
   const daysEl = document.createElement('div'); daysEl.className='cal-days';
-  for(let i=0;i<42;i++){
+  for(let i=startIdx;i<startIdx+count;i++){
     const d = new Date(gridStart); d.setDate(gridStart.getDate()+i);
     const dStr = toDateStr(d);
     const cell = document.createElement('div');
@@ -602,17 +730,18 @@ function buildMiniCalendar(){
     if(hasTodo){ const dot=document.createElement('span'); dot.className='cal-dot'; dot.style.background='var(--todo)'; dots.appendChild(dot); }
     cell.appendChild(dots);
 
-    if(i%7 === 6){ /* week end marker, no-op */ }
     daysEl.appendChild(cell);
   }
   wrap.appendChild(daysEl);
 
-  const legend = document.createElement('div'); legend.className='cal-legend';
-  legend.innerHTML = `
-    <span><span class="legend-dot" style="background:var(--work)"></span>회사 일정</span>
-    <span><span class="legend-dot" style="background:var(--personal)"></span>개인 일정</span>
-    <span><span class="legend-dot" style="background:var(--todo)"></span>할일</span>`;
-  wrap.appendChild(legend);
+  if(!collapsed){
+    const legend = document.createElement('div'); legend.className='cal-legend';
+    legend.innerHTML = `
+      <span><span class="legend-dot" style="background:var(--work)"></span>회사 일정</span>
+      <span><span class="legend-dot" style="background:var(--personal)"></span>개인 일정</span>
+      <span><span class="legend-dot" style="background:var(--todo)"></span>할일</span>`;
+    wrap.appendChild(legend);
+  }
   return wrap;
 }
 
@@ -631,7 +760,7 @@ function buildCard(cal, type, title, emoji){
     list = list.filter(it=> (it.endDate||it.startDate) >= todayStr());
     list = list.sort((a,b)=> (a.startDate+ (a.startTime||'00:00')).localeCompare(b.startDate+(b.startTime||'00:00')));
   } else {
-    list = list.sort((a,b)=> (a.done?1:0)-(b.done?1:0));
+    list = list.sort((a,b)=> (a.done?1:0)-(b.done?1:0) || ((b.important?1:0)-(a.important?1:0)));
   }
   const shown = list.slice(0,10);
   if(shown.length===0){
@@ -653,8 +782,17 @@ function buildCard(cal, type, title, emoji){
       t.textContent = it.startTime ? it.startTime : fmtFullDate(it.startDate);
       row.appendChild(t);
     }
-    const rt = document.createElement('span'); rt.className='rtitle'; rt.textContent = it.title;
-    row.appendChild(rt);
+    const body = document.createElement('span'); body.className='rbody';
+    const rt = document.createElement('div'); rt.className='rtitle'; rt.textContent = it.title;
+    body.appendChild(rt);
+    if(it.memo){ const rm=document.createElement('div'); rm.className='rmemo'; rm.textContent=it.memo; body.appendChild(rm); }
+    row.appendChild(body);
+    if(type==='todo'){
+      const star = document.createElement('button'); star.className='star-btn'+(it.important?' important':'');
+      star.textContent = it.important?'★':'☆';
+      star.onclick=(e)=>{ e.stopPropagation(); it.important=!it.important; saveAll(); renderAll(); };
+      row.appendChild(star);
+    }
     row.onclick = ()=> openItemSheet(it.id);
     listWrap.appendChild(row);
   });
@@ -737,7 +875,7 @@ function buildWeekView(){
 
 function buildMonthView(){
   const wrap = document.createElement('div');
-  wrap.appendChild(buildMiniCalendar());
+  wrap.appendChild(buildMiniCalendar(false));
   const dayItems = sortByTime(itemsOnDate(selectedDate));
   const label = document.createElement('div'); label.className='day-label'; label.textContent = fmtFullDate(selectedDate);
   wrap.appendChild(label);
@@ -762,7 +900,7 @@ function renderTodo(){
     const h = document.createElement('div'); h.className='day-label'; h.textContent = label;
     g.appendChild(h);
     let list = items.filter(it=>it.type==='todo' && it.calendar===cal);
-    list = list.sort((a,b)=> (a.done?1:0)-(b.done?1:0) || (a.startDate||'9999').localeCompare(b.startDate||'9999'));
+    list = list.sort((a,b)=> (a.done?1:0)-(b.done?1:0) || ((b.important?1:0)-(a.important?1:0)) || (a.startDate||'9999').localeCompare(b.startDate||'9999'));
     if(list.length===0){
       const e=document.createElement('div'); e.className='empty'; e.textContent='할일이 없어요.';
       g.appendChild(e);
@@ -803,13 +941,197 @@ function renderItemRow(it){
     a.href = gcalUrl(it);
     meta.appendChild(a);
   }
-  if(it.memo){ const m=document.createElement('span'); m.textContent='· '+it.memo; meta.appendChild(m); }
   body.appendChild(meta);
+  if(it.memo){ const m=document.createElement('div'); m.className='memo-preview'; m.textContent=it.memo; body.appendChild(m); }
   row.appendChild(body);
+
+  if(it.type==='todo'){
+    const star = document.createElement('button'); star.className='star-btn big'+(it.important?' important':'');
+    star.textContent = it.important?'★':'☆';
+    star.onclick = ()=>{ it.important=!it.important; saveAll(); renderAll(); };
+    row.appendChild(star);
+  }
 
   const edit = document.createElement('button'); edit.className='edit'; edit.textContent='✎';
   edit.onclick = ()=> openItemSheet(it.id);
   row.appendChild(edit);
+  return row;
+}
+
+/* ---------------- RECURRING TODOS ---------------- */
+function daysInMonth(y,m){ return new Date(y, m, 0).getDate(); } // m: 1-12
+function ensureRecurringInstances(){
+  const now = new Date();
+  const y = now.getFullYear(), m = now.getMonth()+1;
+  let changed = false;
+  recurringTemplates.filter(t=>t.active).forEach(t=>{
+    if(t.repeat==='yearly' && t.month !== m) return;
+    const dim = daysInMonth(y, m);
+    const day = Math.min(t.day, dim);
+    const dateStr = y+'-'+pad(m)+'-'+pad(day);
+    const period = t.repeat==='monthly' ? (y+'-'+pad(m)) : (''+y);
+    const exists = items.some(it=>it.recurringId===t.id && it.recurringPeriod===period);
+    if(!exists){
+      items.push({id:uid(), type:'todo', calendar:t.calendar, title:t.title, startDate:dateStr, startTime:null,
+        endDate:null, endTime:null, memo:t.memo||'', done:false, important:false,
+        recurringId:t.id, recurringPeriod:period});
+      changed = true;
+    }
+  });
+  if(changed) saveAll();
+}
+
+let editingRecurringId = null;
+let r_cal = 'work';
+let r_repeat = 'monthly';
+
+function openRecurringSheet(id){
+  editingRecurringId = id || null;
+  document.getElementById('recurringSheetTitle').textContent = id ? '정기 할일 수정' : '정기 할일 추가';
+  document.getElementById('rDeleteBtn').style.display = id ? 'block':'none';
+  if(id){
+    const t = recurringTemplates.find(x=>x.id===id);
+    r_cal = t.calendar; r_repeat = t.repeat;
+    document.getElementById('r-title').value = t.title;
+    document.getElementById('r-day').value = t.day;
+    document.getElementById('r-month').value = t.month || '';
+    document.getElementById('r-memo').value = t.memo || '';
+  } else {
+    r_cal = 'work'; r_repeat = 'monthly';
+    document.getElementById('r-title').value = '';
+    document.getElementById('r-day').value = '';
+    document.getElementById('r-month').value = '';
+    document.getElementById('r-memo').value = '';
+  }
+  updateRCalSegUI(); updateRRepeatSegUI();
+  document.getElementById('recurringBackdrop').classList.add('open');
+}
+function closeRecurringSheet(){ document.getElementById('recurringBackdrop').classList.remove('open'); }
+
+document.getElementById('rCalSeg').addEventListener('click', e=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  r_cal = btn.dataset.v; updateRCalSegUI();
+});
+function updateRCalSegUI(){ [...document.getElementById('rCalSeg').children].forEach(b=>b.classList.toggle('active', b.dataset.v===r_cal)); }
+
+document.getElementById('rRepeatSeg').addEventListener('click', e=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  r_repeat = btn.dataset.v; updateRRepeatSegUI();
+});
+function updateRRepeatSegUI(){
+  [...document.getElementById('rRepeatSeg').children].forEach(b=>b.classList.toggle('active', b.dataset.v===r_repeat));
+  document.getElementById('r-month-field').style.display = r_repeat==='yearly' ? 'block' : 'none';
+}
+
+function saveRecurringItem(){
+  const title = document.getElementById('r-title').value.trim();
+  const day = parseInt(document.getElementById('r-day').value, 10);
+  const month = r_repeat==='yearly' ? parseInt(document.getElementById('r-month').value, 10) : null;
+  const memo = document.getElementById('r-memo').value.trim();
+  if(!title){ alert('제목을 입력해주세요'); return; }
+  if(!day || day<1 || day>31){ alert('날짜(일)를 1~31 사이로 입력해주세요'); return; }
+  if(r_repeat==='yearly' && (!month || month<1 || month>12)){ alert('월을 1~12 사이로 입력해주세요'); return; }
+
+  if(editingRecurringId){
+    const t = recurringTemplates.find(x=>x.id===editingRecurringId);
+    t.title=title; t.calendar=r_cal; t.repeat=r_repeat; t.day=day; t.month=month; t.memo=memo;
+  } else {
+    recurringTemplates.push({id:uid(), title, calendar:r_cal, repeat:r_repeat, day, month, memo, active:true});
+  }
+  persistRecurring();
+  ensureRecurringInstances();
+  closeRecurringSheet();
+  renderAll();
+}
+function deleteCurrentRecurring(){
+  if(!editingRecurringId) return;
+  recurringTemplates = recurringTemplates.filter(x=>x.id!==editingRecurringId);
+  persistRecurring();
+  closeRecurringSheet();
+  renderAll();
+}
+function toggleRecurringActive(id){
+  const t = recurringTemplates.find(x=>x.id===id);
+  if(!t) return;
+  t.active = !t.active;
+  persistRecurring();
+  if(t.active) ensureRecurringInstances();
+  renderAll();
+}
+
+let recurringOpenSections = { work_monthly:true, work_yearly:false, personal_monthly:true, personal_yearly:false };
+
+function renderRecurringPage(){
+  const el = document.getElementById('screenRecurring');
+  el.innerHTML = '';
+
+  const note = document.createElement('div'); note.className='settings-note';
+  note.textContent = '여기 등록해두면 매월(또는 매년) 해당 날짜가 되었을 때 할일 목록에 자동으로 채워져요. 아래에서 구분·주기별로 펼쳐서 전체 목록을 확인할 수 있어요.';
+  el.appendChild(note);
+
+  const addBtn = document.createElement('button'); addBtn.className='add-recurring-btn';
+  addBtn.textContent = '+ 정기 할일 추가';
+  addBtn.onclick = ()=> openRecurringSheet(null);
+  el.appendChild(addBtn);
+
+  const groups = [
+    ['work','monthly','🔵 회사 · 매월'],
+    ['work','yearly','🔵 회사 · 매년'],
+    ['personal','monthly','🟢 개인 · 매월'],
+    ['personal','yearly','🟢 개인 · 매년'],
+  ];
+
+  groups.forEach(([cal,repeat,label])=>{
+    const key = cal+'_'+repeat;
+    const list = recurringTemplates.filter(t=>t.calendar===cal && t.repeat===repeat);
+    const open = recurringOpenSections[key];
+
+    const section = document.createElement('div'); section.className='accordion-section';
+    const header = document.createElement('button'); header.className='accordion-header';
+    header.innerHTML = `<span>${label}<span class="accordion-count">${list.length}</span></span><span class="accordion-caret">${open ? '▾' : '▸'}</span>`;
+    header.onclick = ()=>{ recurringOpenSections[key] = !recurringOpenSections[key]; renderRecurringPage(); };
+    section.appendChild(header);
+
+    if(open){
+      const body = document.createElement('div'); body.className='accordion-body';
+      if(list.length===0){
+        const e = document.createElement('div'); e.className='empty-mini'; e.textContent='등록된 항목이 없어요.';
+        body.appendChild(e);
+      } else {
+        list.forEach(t=> body.appendChild(buildRecurringRow(t)));
+      }
+      section.appendChild(body);
+    }
+    el.appendChild(section);
+  });
+}
+
+function buildRecurringRow(t){
+  const row = document.createElement('div'); row.className='item'+(t.active?'':' done');
+  const bar = document.createElement('div'); bar.className='bar '+t.calendar;
+  row.appendChild(bar);
+
+  const body = document.createElement('div'); body.className='body';
+  const title = document.createElement('div'); title.className='title'; title.textContent=t.title;
+  body.appendChild(title);
+  const meta = document.createElement('div'); meta.className='meta';
+  const freq = document.createElement('span');
+  freq.textContent = t.repeat==='monthly' ? ('매월 '+t.day+'일') : ('매년 '+t.month+'월 '+t.day+'일');
+  meta.appendChild(freq);
+  if(!t.active){ const s=document.createElement('span'); s.textContent='꺼짐'; meta.appendChild(s); }
+  body.appendChild(meta);
+  if(t.memo){ const m=document.createElement('div'); m.className='memo-preview'; m.textContent=t.memo; body.appendChild(m); }
+  row.appendChild(body);
+
+  const toggleBtn = document.createElement('button'); toggleBtn.className='edit';
+  toggleBtn.textContent = t.active ? '⏸' : '▶';
+  toggleBtn.onclick = ()=> toggleRecurringActive(t.id);
+  row.appendChild(toggleBtn);
+
+  const edit = document.createElement('button'); edit.className='edit'; edit.textContent='✎';
+  edit.onclick = ()=> openRecurringSheet(t.id);
+  row.appendChild(edit);
+
   return row;
 }
 
@@ -818,7 +1140,15 @@ function renderSettings(){
   const el = document.getElementById('screenSettings');
   const connected = isGoogleConnected();
   el.innerHTML = `
-    <div class="field">
+    <div class="settings-link-card" onclick="currentTab='recurring'; renderAll();">
+      <div>
+        <div class="l-title">🔁 정기 할일 관리</div>
+        <div class="l-sub">매월·매년 반복되는 할일 ${recurringTemplates.length}개 등록됨</div>
+      </div>
+      <span style="color:var(--sub);">›</span>
+    </div>
+
+    <div class="field" style="margin-top:20px;">
       <label>회사 Google 계정 (원클릭 등록용)</label>
       <input type="text" id="s-work" placeholder="ns.cho@thebuilders.co.kr">
     </div>
@@ -926,7 +1256,7 @@ function saveItem(){
     it.startDate=startDate; it.startTime=startTime; it.endDate=endDate; it.endTime=endTime; it.memo=memo;
     savedItem = it;
   } else {
-    savedItem = {id:uid(), type:f_type, calendar:f_cal, title, startDate, startTime, endDate, endTime, memo, done:false};
+    savedItem = {id:uid(), type:f_type, calendar:f_cal, title, startDate, startTime, endDate, endTime, memo, done:false, important:false};
     items.push(savedItem);
   }
   saveAll();
@@ -963,18 +1293,22 @@ function renderAll(){
   document.getElementById('screenSchedule').hidden = currentTab!=='schedule';
   document.getElementById('screenTodo').hidden = currentTab!=='todo';
   document.getElementById('screenSettings').hidden = currentTab!=='settings';
-  document.getElementById('chips').hidden = currentTab==='settings';
+  document.getElementById('screenRecurring').hidden = currentTab!=='recurring';
+  document.getElementById('chips').hidden = (currentTab==='settings' || currentTab==='recurring');
 
   if(currentTab==='home') renderHome();
   else if(currentTab==='schedule') renderSchedule();
   else if(currentTab==='todo') renderTodo();
   else if(currentTab==='settings') renderSettings();
+  else if(currentTab==='recurring') renderRecurringPage();
 
+  const navTab = currentTab==='recurring' ? 'settings' : currentTab;
   [...document.getElementById('bottomNav').children].forEach(b=>{
-    b.classList.toggle('active', b.dataset.tab===currentTab);
+    b.classList.toggle('active', b.dataset.tab===navTab);
   });
 }
 
+ensureRecurringInstances();
 renderAll();
 window.addEventListener('load', ()=>{ setTimeout(tryAutoConnect, 400); });
 </script>
