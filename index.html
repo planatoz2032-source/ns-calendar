@@ -18,9 +18,13 @@
     --border:#ececf1;
   }
   *{box-sizing:border-box;}
-  body{
+  html, body{
     margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
-    background:var(--bg); color:var(--text); padding-bottom:78px;
+    background:#e4e6ec; color:var(--text);
+  }
+  #appShell{
+    max-width:480px; margin:0 auto; background:var(--bg); min-height:100vh; padding-bottom:78px;
+    box-shadow:0 0 24px rgba(0,0,0,0.06); position:relative;
   }
   #topHeader{
     position:sticky; top:0; z-index:10; background:var(--card); border-bottom:1px solid var(--border);
@@ -69,6 +73,7 @@
   .card .row-item .rtitle{flex:1; word-break:break-word;}
   .card .row-item.done .rtitle{text-decoration:line-through; color:var(--done);}
   .card .empty-mini{font-size:12px; color:var(--sub); padding:8px 0;}
+  .card .card-list{max-height:230px; overflow-y:auto;}
   .cb-mini{width:15px; height:15px; border-radius:50%; border:2px solid var(--todo); flex:0 0 15px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:9px; color:#fff; margin-top:1px;}
   .cb-mini.checked{background:var(--todo);}
 
@@ -125,7 +130,8 @@
 
   /* bottom nav */
   #bottomNav{
-    position:fixed; bottom:0; left:0; right:0; background:var(--card); border-top:1px solid var(--border);
+    position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px;
+    background:var(--card); border-top:1px solid var(--border);
     display:flex; z-index:20; padding-bottom:env(safe-area-inset-bottom);
   }
   #bottomNav button{
@@ -161,6 +167,7 @@
 </head>
 <body>
 
+<div id="appShell">
 <header id="topHeader"></header>
 <div class="chips" id="chips"></div>
 <div class="viewtabs" id="viewtabs" hidden></div>
@@ -169,6 +176,7 @@
 <main class="screen" id="screenSchedule" hidden></main>
 <main class="screen" id="screenTodo" hidden></main>
 <main class="screen" id="screenSettings" hidden></main>
+</div>
 
 <nav id="bottomNav">
   <button data-tab="home"><span class="navicon">🏠</span><span>홈</span></button>
@@ -484,11 +492,13 @@ function buildCard(cal, type, title, emoji){
   } else {
     list = list.sort((a,b)=> (a.done?1:0)-(b.done?1:0));
   }
-  const shown = list.slice(0,4);
+  const shown = list.slice(0,10);
   if(shown.length===0){
     const e = document.createElement('div'); e.className='empty-mini'; e.textContent='없음';
     card.appendChild(e);
   }
+  const listWrap = document.createElement('div'); listWrap.className='card-list';
+  card.appendChild(listWrap);
   shown.forEach(it=>{
     const row = document.createElement('div');
     row.className = 'row-item' + (it.done?' done':'');
@@ -505,7 +515,7 @@ function buildCard(cal, type, title, emoji){
     const rt = document.createElement('span'); rt.className='rtitle'; rt.textContent = it.title;
     row.appendChild(rt);
     row.onclick = ()=> openItemSheet(it.id);
-    card.appendChild(row);
+    listWrap.appendChild(row);
   });
   return card;
 }
