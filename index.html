@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>NS 캘린더 & 할일</title>
+<style>
+  :root{
+    color-scheme: light;
+    --work:#3b82f6;
+    --personal:#10b981;
+    --todo:#f59e0b;
+    --bg:#f7f7fa;
+    --card:#ffffff;
+    --text:#1f2430;
+    --sub:#8a8f9c;
+    --border:#eceef2;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+    background:var(--bg); color:var(--text); padding-bottom:96px;
+  }
+  header{
+    position:sticky; top:0; z-index:10; background:var(--card); border-bottom:1px solid var(--border);
+    padding:14px 16px; display:flex; align-items:center; justify-content:space-between;
+  }
+  header h1{font-size:18px; margin:0;}
+  header .today{font-size:12px; color:var(--sub); margin-top:2px;}
+  .icon-btn{background:none; border:none; font-size:20px; padding:6px; cursor:pointer; color:var(--sub);}
+
+  .chips{display:flex; gap:8px; padding:12px 16px; overflow-x:auto;}
+  .chip{flex:0 0 auto; padding:7px 14px; border-radius:999px; border:1px solid var(--border); background:var(--card); font-size:13px; cursor:pointer; white-space:nowrap;}
+  .chip.active{background:var(--text); color:#fff; border-color:var(--text);}
+
+  main{padding:0 16px;}
+  .day-group{margin-bottom:18px;}
+  .day-label{font-size:13px; font-weight:600; color:var(--sub); margin:14px 0 8px; display:flex; align-items:center; gap:6px;}
+  .day-label.today-label{color:var(--text);}
+  .day-label .dot{width:6px; height:6px; border-radius:50%; background:var(--sub);}
+
+  .item{
+    background:var(--card); border-radius:14px; padding:12px 14px; margin-bottom:8px;
+    display:flex; align-items:flex-start; gap:10px; border:1px solid var(--border);
+    box-shadow:0 1px 2px rgba(0,0,0,0.02);
+  }
+  .item .bar{width:4px; align-self:stretch; border-radius:4px; flex:0 0 4px;}
+  .bar.work{background:var(--work);}
+  .bar.personal{background:var(--personal);}
+  .bar.todo{background:var(--todo);}
+  .item .body{flex:1; min-width:0;}
+  .item .title{font-size:15px; font-weight:600; line-height:1.4; word-break:break-word;}
+  .item.done .title{text-decoration:line-through; color:var(--sub);}
+  .item .meta{font-size:12px; color:var(--sub); margin-top:3px; display:flex; gap:8px; flex-wrap:wrap;}
+  .tag{font-size:11px; padding:2px 7px; border-radius:6px; font-weight:600;}
+  .tag.work{background:#e8f0fe; color:var(--work);}
+  .tag.personal{background:#e3faf1; color:var(--personal);}
+  .tag.todo{background:#fef3e2; color:var(--todo);}
+  .item .actions{display:flex; gap:6px; align-items:center;}
+  .item .actions button{border:none; background:var(--bg); border-radius:8px; width:32px; height:32px; font-size:14px; cursor:pointer;}
+  .checkbox{width:22px; height:22px; border-radius:50%; border:2px solid var(--todo); flex:0 0 22px; margin-top:2px; cursor:pointer; background:#fff; display:flex; align-items:center; justify-content:center; font-size:12px; color:#fff;}
+  .checkbox.checked{background:var(--todo);}
+  .gcal-btn{font-size:11px; padding:4px 8px; border-radius:7px; border:1px solid var(--border); background:#fff; color:var(--text); cursor:pointer; text-decoration:none; display:inline-block;}
+
+  .empty{text-align:center; color:var(--sub); font-size:13px; padding:40px 0;}
+
+  .fab{
+    position:fixed; right:20px; bottom:24px; width:56px; height:56px; border-radius:50%;
+    background:var(--text); color:#fff; font-size:28px; border:none; box-shadow:0 4px 14px rgba(0,0,0,0.25);
+    cursor:pointer; z-index:20;
+  }
+
+  .sheet-backdrop{
+    position:fixed; inset:0; background:rgba(0,0,0,0.35); display:none; align-items:flex-end; justify-content:center; z-index:30;
+  }
+  .sheet-backdrop.open{display:flex;}
+  .sheet{
+    background:#fff; width:100%; max-width:480px; border-radius:18px 18px 0 0; padding:18px 18px 24px;
+    max-height:88vh; overflow-y:auto;
+  }
+  .sheet h2{margin:0 0 14px; font-size:17px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block; font-size:12px; color:var(--sub); margin-bottom:5px;}
+  .field input[type=text], .field input[type=date], .field input[type=time], .field textarea{
+    width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); font-size:15px; background:#fafafa;
+  }
+  .seg{display:flex; gap:8px;}
+  .seg button{flex:1; padding:10px; border-radius:10px; border:1px solid var(--border); background:#fafafa; font-size:14px; cursor:pointer;}
+  .seg button.active{background:var(--text); color:#fff; border-color:var(--text);}
+  .row{display:flex; gap:10px;}
+  .row .field{flex:1;}
+  .sheet-actions{display:flex; gap:10px; margin-top:16px;}
+  .sheet-actions button{flex:1; padding:13px; border-radius:12px; border:none; font-size:15px; font-weight:600; cursor:pointer;}
+  .btn-primary{background:var(--text); color:#fff;}
+  .btn-ghost{background:var(--bg); color:var(--text);}
+  .btn-danger{background:#fde8e8; color:#c0392b;}
+
+  .allday-row{display:flex; align-items:center; gap:8px; font-size:13px; color:var(--sub); margin-bottom:12px;}
+  .allday-row input{width:16px; height:16px;}
+
+  .settings-note{font-size:12px; color:var(--sub); line-height:1.6; margin-top:10px;}
+  a{color:inherit;}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>NS 캘린더 &amp; 할일</h1>
+    <div class="today" id="todayLabel"></div>
+  </div>
+  <button class="icon-btn" onclick="openSettings()">⚙️</button>
+</header>
+
+<div class="chips" id="chips"></div>
+
+<main id="list"></main>
+
+<button class="fab" onclick="openItemSheet()">+</button>
+
+<!-- Add/Edit sheet -->
+<div class="sheet-backdrop" id="itemBackdrop">
+  <div class="sheet">
+    <h2 id="itemSheetTitle">새 항목</h2>
+    <div class="seg" id="typeSeg">
+      <button data-v="event" class="active">일정</button>
+      <button data-v="todo">할일</button>
+    </div>
+    <br>
+    <div class="field">
+      <label>제목</label>
+      <input type="text" id="f-title" placeholder="예: 팀 회의 / 보고서 제출">
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>날짜</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="field" id="timeField">
+        <label>시간</label>
+        <input type="time" id="f-time">
+      </div>
+    </div>
+    <div class="allday-row" id="alldayRow">
+      <input type="checkbox" id="f-allday">
+      <label for="f-allday">종일</label>
+    </div>
+    <div class="field" id="calField">
+      <label>캘린더</label>
+      <div class="seg" id="calSeg">
+        <button data-v="work" class="active">회사</button>
+        <button data-v="personal">개인</button>
+        <button data-v="none">등록 안 함</button>
+      </div>
+    </div>
+    <div class="field">
+      <label>메모 (선택)</label>
+      <textarea id="f-memo" rows="2" placeholder="장소, 링크 등"></textarea>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-ghost" onclick="closeItemSheet()">취소</button>
+      <button class="btn-danger" id="deleteBtn" style="display:none;" onclick="deleteCurrentItem()">삭제</button>
+      <button class="btn-primary" onclick="saveItem()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- Settings sheet -->
+<div class="sheet-backdrop" id="settingsBackdrop">
+  <div class="sheet">
+    <h2>설정</h2>
+    <div class="field">
+      <label>회사 Google 계정</label>
+      <input type="text" id="s-work" placeholder="ns.cho@thebuilders.co.kr">
+    </div>
+    <div class="field">
+      <label>개인 Google 계정</label>
+      <input type="text" id="s-personal" placeholder="you@gmail.com">
+    </div>
+    <div class="settings-note">
+      "구글 캘린더에 추가" 버튼을 누르면 해당 계정으로 미리 채워진 새 일정 화면이 새 탭에서 열려요. 마지막에 "저장"만 누르면 실제 캘린더에 등록됩니다. (계정을 적어두면 여러 계정 중 어떤 캘린더에 들어갈지 자동으로 지정돼요)
+    </div>
+    <div class="sheet-actions">
+      <button class="btn-ghost" onclick="closeSettings()">닫기</button>
+      <button class="btn-primary" onclick="saveSettings()">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const STORAGE_KEY = 'ns_dashboard_items_v1';
+const SETTINGS_KEY = 'ns_dashboard_settings_v1';
+
+let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
+if(!settings.work) settings.work = 'ns.cho@thebuilders.co.kr';
+if(!settings.personal) settings.personal = '';
+
+let currentFilter = 'all';
+let editingId = null;
+let typeVal = 'event';
+let calVal = 'work';
+
+function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function saveAll(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
+function saveSettingsToStorage(){
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+
+function pad(n){ return n.toString().padStart(2,'0'); }
+function toDateStr(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function todayStr(){ return toDateStr(new Date()); }
+
+function fmtHeader(dateStr){
+  const d = new Date(dateStr+'T00:00:00');
+  const t = new Date(); t.setHours(0,0,0,0);
+  const diff = Math.round((d - t)/86400000);
+  const wd = ['일','월','화','수','목','금','토'][d.getDay()];
+  const base = `${d.getMonth()+1}월 ${d.getDate()}일 (${wd})`;
+  if(diff===0) return {label:'오늘 · '+base, today:true};
+  if(diff===1) return {label:'내일 · '+base, today:false};
+  if(diff===-1) return {label:'어제 · '+base, today:false};
+  return {label:base, today:false};
+}
+
+const chips = [
+  {v:'all', label:'전체'},
+  {v:'event', label:'일정'},
+  {v:'todo', label:'할일'},
+  {v:'work', label:'회사'},
+  {v:'personal', label:'개인'},
+];
+
+function renderChips(){
+  const el = document.getElementById('chips');
+  el.innerHTML = '';
+  chips.forEach(c=>{
+    const b = document.createElement('button');
+    b.className = 'chip' + (currentFilter===c.v ? ' active':'');
+    b.textContent = c.label;
+    b.onclick = ()=>{ currentFilter = c.v; render(); };
+    el.appendChild(b);
+  });
+}
+
+function matchesFilter(it){
+  if(currentFilter==='all') return true;
+  if(currentFilter==='event') return it.type==='event';
+  if(currentFilter==='todo') return it.type==='todo';
+  if(currentFilter==='work') return it.calendar==='work';
+  if(currentFilter==='personal') return it.calendar==='personal';
+  return true;
+}
+
+function gcalUrl(it){
+  const text = encodeURIComponent(it.title);
+  let dates;
+  if(it.allDay || it.type==='todo'){
+    const start = it.date.replace(/-/g,'');
+    const next = new Date(it.date+'T00:00:00');
+    next.setDate(next.getDate()+1);
+    const end = toDateStr(next).replace(/-/g,'');
+    dates = start+'/'+end;
+  } else {
+    const time = it.time || '09:00';
+    const start = new Date(`${it.date}T${time}:00+09:00`);
+    const end = new Date(start.getTime() + 60*60*1000);
+    const fmt = d => d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
+    dates = fmt(start)+'/'+fmt(end);
+  }
+  const details = encodeURIComponent(it.memo||'');
+  let url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${dates}&details=${details}&ctz=Asia%2FSeoul`;
+  const email = it.calendar==='work' ? settings.work : (it.calendar==='personal' ? settings.personal : '');
+  if(email) url += `&authuser=${encodeURIComponent(email)}`;
+  return url;
+}
+
+function render(){
+  document.getElementById('todayLabel').textContent = new Date().toLocaleDateString('ko-KR', {year:'numeric',month:'long',day:'numeric',weekday:'long'});
+  renderChips();
+  const list = document.getElementById('list');
+  list.innerHTML = '';
+
+  const visible = items.filter(matchesFilter);
+  if(visible.length===0){
+    list.innerHTML = '<div class="empty">표시할 항목이 없어요. + 버튼으로 추가해보세요.</div>';
+    return;
+  }
+
+  // group: no-date todos first, then by date ascending
+  const noDate = visible.filter(it=>!it.date).sort((a,b)=>a.title.localeCompare(b.title));
+  const dated = visible.filter(it=>it.date).sort((a,b)=> (a.date+ (a.time||'00:00')).localeCompare(b.date+(b.time||'00:00')));
+
+  if(noDate.length){
+    const g = document.createElement('div'); g.className='day-group';
+    g.innerHTML = '<div class="day-label">날짜 없는 할일</div>';
+    noDate.forEach(it=> g.appendChild(renderItem(it)));
+    list.appendChild(g);
+  }
+
+  const groups = {};
+  const order = [];
+  dated.forEach(it=>{
+    if(!groups[it.date]){ groups[it.date]=[]; order.push(it.date); }
+    groups[it.date].push(it);
+  });
+
+  order.forEach(dateStr=>{
+    const g = document.createElement('div'); g.className='day-group';
+    const {label, today} = fmtHeader(dateStr);
+    g.innerHTML = `<div class="day-label ${today?'today-label':''}"><span class="dot"></span>${label}</div>`;
+    groups[dateStr].forEach(it=> g.appendChild(renderItem(it)));
+    list.appendChild(g);
+  });
+}
+
+function renderItem(it){
+  const row = document.createElement('div');
+  row.className = 'item' + (it.done ? ' done':'');
+
+  const bar = document.createElement('div');
+  bar.className = 'bar ' + (it.type==='todo' ? 'todo' : it.calendar);
+  row.appendChild(bar);
+
+  if(it.type==='todo'){
+    const cb = document.createElement('div');
+    cb.className = 'checkbox' + (it.done ? ' checked':'');
+    cb.textContent = it.done ? '✓' : '';
+    cb.onclick = ()=>{ it.done = !it.done; saveAll(); render(); };
+    row.appendChild(cb);
+  }
+
+  const body = document.createElement('div');
+  body.className = 'body';
+  const title = document.createElement('div');
+  title.className = 'title';
+  title.textContent = it.title;
+  body.appendChild(title);
+
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  if(it.type==='event'){
+    const tag = document.createElement('span');
+    tag.className = 'tag ' + it.calendar;
+    tag.textContent = it.calendar==='work' ? '회사' : (it.calendar==='personal' ? '개인' : '미등록');
+    meta.appendChild(tag);
+    if(!it.allDay && it.time){
+      const t = document.createElement('span'); t.textContent = it.time; meta.appendChild(t);
+    } else if(it.allDay){
+      const t = document.createElement('span'); t.textContent = '종일'; meta.appendChild(t);
+    }
+    if(it.calendar!=='none'){
+      const a = document.createElement('a');
+      a.className='gcal-btn'; a.textContent='G캘린더에 추가'; a.target='_blank'; a.rel='noopener';
+      a.href = gcalUrl(it);
+      meta.appendChild(a);
+    }
+  } else {
+    const tag = document.createElement('span');
+    tag.className = 'tag todo'; tag.textContent = '할일';
+    meta.appendChild(tag);
+  }
+  if(it.memo){
+    const m = document.createElement('span'); m.textContent = '· ' + it.memo; meta.appendChild(m);
+  }
+  body.appendChild(meta);
+  row.appendChild(body);
+
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+  const editBtn = document.createElement('button');
+  editBtn.textContent = '✎';
+  editBtn.onclick = ()=> openItemSheet(it.id);
+  actions.appendChild(editBtn);
+  row.appendChild(actions);
+
+  return row;
+}
+
+// ---- item sheet ----
+function openItemSheet(id){
+  editingId = id || null;
+  document.getElementById('itemSheetTitle').textContent = id ? '항목 수정' : '새 항목';
+  document.getElementById('deleteBtn').style.display = id ? 'block' : 'none';
+
+  if(id){
+    const it = items.find(x=>x.id===id);
+    typeVal = it.type;
+    calVal = it.calendar || 'work';
+    document.getElementById('f-title').value = it.title;
+    document.getElementById('f-date').value = it.date || '';
+    document.getElementById('f-time').value = it.time || '';
+    document.getElementById('f-allday').checked = !!it.allDay;
+    document.getElementById('f-memo').value = it.memo || '';
+  } else {
+    typeVal = 'event'; calVal = 'work';
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-date').value = todayStr();
+    document.getElementById('f-time').value = '';
+    document.getElementById('f-allday').checked = false;
+    document.getElementById('f-memo').value = '';
+  }
+  updateTypeSegUI();
+  updateCalSegUI();
+  document.getElementById('itemBackdrop').classList.add('open');
+}
+function closeItemSheet(){
+  document.getElementById('itemBackdrop').classList.remove('open');
+}
+
+document.getElementById('typeSeg').addEventListener('click', e=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  typeVal = btn.dataset.v;
+  updateTypeSegUI();
+});
+function updateTypeSegUI(){
+  [...document.getElementById('typeSeg').children].forEach(b=> b.classList.toggle('active', b.dataset.v===typeVal));
+  document.getElementById('calField').style.display = typeVal==='event' ? 'block' : 'none';
+  document.getElementById('timeField').style.display = typeVal==='event' ? 'block' : 'none';
+  document.getElementById('alldayRow').style.display = typeVal==='event' ? 'flex' : 'none';
+}
+
+document.getElementById('calSeg').addEventListener('click', e=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  calVal = btn.dataset.v;
+  updateCalSegUI();
+});
+function updateCalSegUI(){
+  [...document.getElementById('calSeg').children].forEach(b=> b.classList.toggle('active', b.dataset.v===calVal));
+}
+
+function saveItem(){
+  const title = document.getElementById('f-title').value.trim();
+  if(!title){ alert('제목을 입력해주세요'); return; }
+  const date = document.getElementById('f-date').value || null;
+  const time = document.getElementById('f-time').value || null;
+  const allDay = document.getElementById('f-allday').checked;
+  const memo = document.getElementById('f-memo').value.trim();
+
+  if(editingId){
+    const it = items.find(x=>x.id===editingId);
+    it.title=title; it.type=typeVal; it.date=date; it.time=allDay?null:time;
+    it.allDay=allDay; it.calendar= typeVal==='event'? calVal : 'none'; it.memo=memo;
+  } else {
+    items.push({
+      id: uid(), type: typeVal, title, date, time: allDay?null:time, allDay,
+      calendar: typeVal==='event' ? calVal : 'none', memo, done:false
+    });
+  }
+  saveAll();
+  closeItemSheet();
+  render();
+}
+function deleteCurrentItem(){
+  if(!editingId) return;
+  items = items.filter(x=>x.id!==editingId);
+  saveAll();
+  closeItemSheet();
+  render();
+}
+
+// ---- settings sheet ----
+function openSettings(){
+  document.getElementById('s-work').value = settings.work || '';
+  document.getElementById('s-personal').value = settings.personal || '';
+  document.getElementById('settingsBackdrop').classList.add('open');
+}
+function closeSettings(){
+  document.getElementById('settingsBackdrop').classList.remove('open');
+}
+function saveSettings(){
+  settings.work = document.getElementById('s-work').value.trim();
+  settings.personal = document.getElementById('s-personal').value.trim();
+  saveSettingsToStorage();
+  closeSettings();
+  render();
+}
+
+render();
+</script>
+</body>
+</html>
