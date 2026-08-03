@@ -67,7 +67,7 @@
   .legend-dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
 
   /* cards */
-  .quad{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .quad{display:grid; grid-template-columns:1fr; gap:10px;}
   .quad.single{grid-template-columns:1fr;}
   .card{background:var(--card); border-radius:16px; padding:12px; border:1px solid var(--border); min-height:120px;}
   .card .card-head{display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:8px;}
@@ -111,6 +111,12 @@
   .tag.personal{background:#e3faf1; color:var(--personal);}
   .tag.todo{background:#fef3e2; color:var(--todo);}
   .gcal-btn{font-size:10.5px; padding:3px 7px; border-radius:7px; border:1px solid var(--border); background:#fff; color:var(--text); text-decoration:none;}
+  .pin-btn{background:none; border:none; cursor:pointer; font-size:16px; padding:0 4px; flex:0 0 auto; color:#d0d3da; align-self:flex-start;}
+  .pin-btn.pinned{color:#3b82f6;}
+  .person-tag{font-size:10.5px; padding:2px 7px; border-radius:6px; font-weight:700; background:#f1eafd; color:#7c3aed; flex:0 0 auto; align-self:flex-start; white-space:nowrap;}
+  .tag.recurring{background:#fdf1e2; color:#b6650a;}
+  .recurring-box{border:1px solid #f3d9ad; background:#fffaf0; border-radius:14px; padding:2px 10px 6px; margin-bottom:16px;}
+  .recurring-box .day-label{color:#b6650a;}
   .checkbox{width:21px; height:21px; border-radius:50%; border:2px solid var(--todo); flex:0 0 21px; margin-top:2px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:11px; color:#fff;}
   .checkbox.checked{background:var(--todo);}
   .item .edit{border:none; background:var(--bg); border-radius:8px; width:28px; height:28px; font-size:13px; cursor:pointer;}
@@ -237,6 +243,17 @@
       <input type="text" id="f-title" placeholder="예: 팀 회의 / 보고서 제출">
     </div>
 
+    <div class="field" id="f-person-field" style="display:none;">
+      <label>구분 (누구 일인가요?)</label>
+      <select id="f-person" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); font-size:15px; background:#fafafa;"></select>
+    </div>
+
+    <div class="field" id="f-pinned-field" style="display:none;">
+      <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+        <input type="checkbox" id="f-pinned" style="width:16px; height:16px;"> 홈 대시보드에 표시 (내 업무예요)
+      </label>
+    </div>
+
     <div class="row2">
       <div class="field">
         <label>시작일</label>
@@ -289,6 +306,7 @@
         <button data-v="monthly" class="active">매월</button>
         <button data-v="yearly">매년</button>
       </div>
+      <div class="settings-note" style="margin-top:6px;">"매년"을 선택하면 아래에 월을 지정하는 칸이 나타나요. (예: 매년 3월 15일)</div>
     </div>
 
     <div class="field">
@@ -351,6 +369,9 @@ if(!settings.work) settings.work = 'ns.cho@thebuilders.co.kr';
 if(!settings.personal) settings.personal = 'planatoz2032@gmail.com';
 if(!settings.clientId) settings.clientId = '860343908563-bktcmuc715dq7g18t0frmkraersltbgg.apps.googleusercontent.com';
 if(settings.homeCollapsed === undefined) settings.homeCollapsed = true;
+if(!settings.personalCategories) settings.personalCategories = [
+  {id:'me', label:'나'}, {id:'son', label:'아들'}, {id:'family', label:'가족'}
+];
 
 const RECURRING_KEY = 'ns_recurring_templates_v1';
 let recurringTemplates = JSON.parse(localStorage.getItem(RECURRING_KEY) || '[]');
@@ -583,6 +604,19 @@ function fmtFullDate(dateStr){
   const d = parseDate(dateStr);
   return `${d.getMonth()+1}월 ${d.getDate()}일 (${weekdayKr(dateStr)})`;
 }
+// 개인 일정/할일 전용: "8월6일(목) 14:30" 또는 "8월6일(목) 종일" 형식 (일-요일 사이 공백 없음)
+function personalDateTimeLabel(it){
+  if(!it.startDate) return '';
+  const d = parseDate(it.startDate);
+  const datePart = `${d.getMonth()+1}월${d.getDate()}일(${weekdayKr(it.startDate)})`;
+  const timePart = it.startTime ? it.startTime : '종일';
+  return `${datePart} ${timePart}`;
+}
+function personLabel(personId){
+  if(!personId) return null;
+  const c = (settings.personalCategories||[]).find(x=>x.id===personId);
+  return c ? c.label : null;
+}
 function weekRangeLabel(dateStr){
   const start = weekStart(dateStr);
   const end = addDays(start,6);
@@ -756,6 +790,7 @@ function buildCard(cal, type, title, emoji){
   card.appendChild(head);
 
   let list = items.filter(it=>it.calendar===cal && it.type===type);
+  if(cal==='work') list = list.filter(it=>it.pinned); // 내 업무로 선택된 것만 홈에 표시
   if(type==='event'){
     list = list.filter(it=> (it.endDate||it.startDate) >= todayStr());
     list = list.sort((a,b)=> (a.startDate+ (a.startTime||'00:00')).localeCompare(b.startDate+(b.startTime||'00:00')));
@@ -764,7 +799,8 @@ function buildCard(cal, type, title, emoji){
   }
   const shown = list.slice(0,10);
   if(shown.length===0){
-    const e = document.createElement('div'); e.className='empty-mini'; e.textContent='없음';
+    const e = document.createElement('div'); e.className='empty-mini';
+    e.textContent = (cal==='work') ? '선택된 항목이 없어요 (✎에서 "내 업무"로 표시해보세요)' : '없음';
     card.appendChild(e);
   }
   const listWrap = document.createElement('div'); listWrap.className='card-list';
@@ -772,15 +808,24 @@ function buildCard(cal, type, title, emoji){
   shown.forEach(it=>{
     const row = document.createElement('div');
     row.className = 'row-item' + (it.done?' done':'');
+    if(cal==='personal' && type==='todo' && personLabel(it.person)){
+      const pt = document.createElement('span'); pt.className='person-tag'; pt.textContent = personLabel(it.person);
+      row.appendChild(pt);
+    }
+    if(cal==='personal' && type==='event'){
+      const t = document.createElement('span'); t.className='rt';
+      t.textContent = personalDateTimeLabel(it);
+      row.appendChild(t);
+    } else if(type==='event'){
+      const t = document.createElement('span'); t.className='rt';
+      t.textContent = it.startTime ? it.startTime : fmtFullDate(it.startDate);
+      row.appendChild(t);
+    }
     if(type==='todo'){
       const cb = document.createElement('div'); cb.className='cb-mini'+(it.done?' checked':'');
       cb.textContent = it.done?'✓':'';
       cb.onclick=(e)=>{ e.stopPropagation(); it.done=!it.done; saveAll(); renderAll(); };
       row.appendChild(cb);
-    } else {
-      const t = document.createElement('span'); t.className='rt';
-      t.textContent = it.startTime ? it.startTime : fmtFullDate(it.startDate);
-      row.appendChild(t);
     }
     const body = document.createElement('span'); body.className='rbody';
     const rt = document.createElement('div'); rt.className='rtitle'; rt.textContent = it.title;
@@ -891,6 +936,20 @@ function buildMonthView(){
 function renderTodo(){
   const el = document.getElementById('screenTodo');
   el.innerHTML = '';
+
+  // 상단: 정기 업무 블럭 (매월/매년 자동 생성된 할일만 모아서 표시)
+  let recurringList = items.filter(it=>it.type==='todo' && it.recurringId && matchesFilter(it));
+  recurringList = recurringList.sort((a,b)=> (a.done?1:0)-(b.done?1:0) || (a.startDate||'9999').localeCompare(b.startDate||'9999'));
+  const rBox = document.createElement('div'); rBox.className='recurring-box';
+  const rh = document.createElement('div'); rh.className='day-label'; rh.textContent='🔁 정기 업무';
+  rBox.appendChild(rh);
+  if(recurringList.length===0){
+    const e=document.createElement('div'); e.className='empty'; e.textContent='이번 달 정기 업무가 없어요.';
+    rBox.appendChild(e);
+  }
+  recurringList.forEach(it=> rBox.appendChild(renderItemRow(it)));
+  el.appendChild(rBox);
+
   const groups = [];
   if(currentFilter!=='personal') groups.push(['work','회사 할일']);
   if(currentFilter!=='work') groups.push(['personal','개인 할일']);
@@ -899,7 +958,7 @@ function renderTodo(){
     const g = document.createElement('div'); g.className='day-group';
     const h = document.createElement('div'); h.className='day-label'; h.textContent = label;
     g.appendChild(h);
-    let list = items.filter(it=>it.type==='todo' && it.calendar===cal);
+    let list = items.filter(it=>it.type==='todo' && it.calendar===cal && !it.recurringId);
     list = list.sort((a,b)=> (a.done?1:0)-(b.done?1:0) || ((b.important?1:0)-(a.important?1:0)) || (a.startDate||'9999').localeCompare(b.startDate||'9999'));
     if(list.length===0){
       const e=document.createElement('div'); e.className='empty'; e.textContent='할일이 없어요.';
@@ -914,8 +973,22 @@ function renderTodo(){
 function renderItemRow(it){
   const row = document.createElement('div');
   row.className = 'item' + (it.done?' done':'');
+
+  if(it.calendar==='personal' && it.type==='todo' && personLabel(it.person)){
+    const pt = document.createElement('span'); pt.className='person-tag'; pt.textContent = personLabel(it.person);
+    pt.style.marginTop = '2px';
+    row.appendChild(pt);
+  }
+
   const bar = document.createElement('div'); bar.className='bar '+(it.type==='todo'?'todo':it.calendar);
   row.appendChild(bar);
+
+  if(it.calendar==='work'){
+    const pin = document.createElement('button'); pin.className='pin-btn'+(it.pinned?' pinned':''); pin.title='홈 대시보드에 표시(내 업무)';
+    pin.textContent = '📌';
+    pin.onclick = ()=>{ it.pinned=!it.pinned; saveAll(); renderAll(); };
+    row.appendChild(pin);
+  }
 
   if(it.type==='todo'){
     const cb = document.createElement('div'); cb.className='checkbox'+(it.done?' checked':'');
@@ -930,12 +1003,17 @@ function renderItemRow(it){
 
   const meta = document.createElement('div'); meta.className='meta';
   const tag = document.createElement('span');
-  tag.className = 'tag ' + (it.type==='todo'?'todo':it.calendar);
-  tag.textContent = it.type==='todo' ? (it.calendar==='work'?'회사 할일':'개인 할일') : (it.calendar==='work'?'회사':'개인');
+  tag.className = 'tag ' + (it.recurringId ? 'recurring' : (it.type==='todo'?'todo':it.calendar));
+  tag.textContent = it.recurringId ? '정기 업무' : (it.type==='todo' ? (it.calendar==='work'?'회사 할일':'개인 할일') : (it.calendar==='work'?'회사':'개인'));
   meta.appendChild(tag);
-  if(it.startTime){ const t=document.createElement('span'); t.textContent=it.startTime; meta.appendChild(t); }
-  else if(it.type==='event'){ const t=document.createElement('span'); t.textContent='종일'; meta.appendChild(t); }
-  if(it.startDate && it.type==='todo'){ const t=document.createElement('span'); t.textContent=fmtFullDate(it.startDate); meta.appendChild(t); }
+
+  if(it.calendar==='personal'){
+    const t = document.createElement('span'); t.textContent = personalDateTimeLabel(it); meta.appendChild(t);
+  } else {
+    if(it.startTime){ const t=document.createElement('span'); t.textContent=it.startTime; meta.appendChild(t); }
+    else if(it.type==='event'){ const t=document.createElement('span'); t.textContent='종일'; meta.appendChild(t); }
+    if(it.startDate && it.type==='todo'){ const t=document.createElement('span'); t.textContent=fmtFullDate(it.startDate); meta.appendChild(t); }
+  }
   if(it.type==='event'){
     const a = document.createElement('a'); a.className='gcal-btn'; a.textContent='G캘린더에 추가'; a.target='_blank'; a.rel='noopener';
     a.href = gcalUrl(it);
@@ -1149,6 +1227,13 @@ function renderSettings(){
     </div>
 
     <div class="field" style="margin-top:20px;">
+      <label>개인 할일 구분 (나 / 아들 / 가족 등)</label>
+      <div id="personCatList" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
+      <button class="add-recurring-btn" style="margin-top:10px;" onclick="addPersonCategory()">+ 구분 추가</button>
+    </div>
+    <div class="settings-note">개인 할일 등록 시 이 구분을 선택하면 할일 맨 앞에 태그로 표시돼요. 이름을 눌러 수정하거나 🗑로 삭제할 수 있어요.</div>
+
+    <div class="field" style="margin-top:20px;">
       <label>회사 Google 계정 (원클릭 등록용)</label>
       <input type="text" id="s-work" placeholder="ns.cho@thebuilders.co.kr">
     </div>
@@ -1183,6 +1268,46 @@ function renderSettings(){
     </div>`;
   document.getElementById('s-work').value = settings.work || '';
   document.getElementById('s-clientid').value = settings.clientId || '';
+  renderPersonCatList();
+}
+
+function renderPersonCatList(){
+  const wrap = document.getElementById('personCatList');
+  if(!wrap) return;
+  wrap.innerHTML = '';
+  (settings.personalCategories||[]).forEach(c=>{
+    const chip = document.createElement('span');
+    chip.style.cssText = 'display:inline-flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--border); border-radius:999px; padding:5px 6px 5px 12px; font-size:13px;';
+    const label = document.createElement('span'); label.textContent = c.label; label.style.cursor='pointer';
+    label.onclick = ()=> editPersonCategory(c.id);
+    chip.appendChild(label);
+    const del = document.createElement('button'); del.textContent='🗑'; del.style.cssText='background:none; border:none; cursor:pointer; font-size:12px; padding:2px 4px;';
+    del.onclick = ()=> deletePersonCategory(c.id);
+    chip.appendChild(del);
+    wrap.appendChild(chip);
+  });
+}
+function addPersonCategory(){
+  const label = prompt('추가할 구분 이름을 입력해주세요 (예: 나, 아들, 딸, 가족)');
+  if(!label || !label.trim()) return;
+  settings.personalCategories.push({id:uid(), label:label.trim()});
+  saveSettingsToStorage();
+  renderPersonCatList();
+}
+function editPersonCategory(id){
+  const c = settings.personalCategories.find(x=>x.id===id);
+  if(!c) return;
+  const label = prompt('구분 이름 수정', c.label);
+  if(!label || !label.trim()) return;
+  c.label = label.trim();
+  saveSettingsToStorage();
+  renderPersonCatList();
+}
+function deletePersonCategory(id){
+  if(!confirm('이 구분을 삭제할까요? 이미 등록된 할일에서는 태그만 사라지고 할일은 그대로 남아요.')) return;
+  settings.personalCategories = settings.personalCategories.filter(x=>x.id!==id);
+  saveSettingsToStorage();
+  renderPersonCatList();
 }
 function saveSettings(){
   settings.work = document.getElementById('s-work').value.trim();
@@ -1213,6 +1338,9 @@ function openItemSheet(id){
     document.getElementById('f-endDate').value = it.endDate || '';
     document.getElementById('f-endTime').value = it.endTime || '';
     document.getElementById('f-memo').value = it.memo || '';
+    document.getElementById('f-pinned').checked = !!it.pinned;
+    updateFieldVisibility();
+    populatePersonSelect(it.person);
   } else {
     f_cal = currentFilter==='personal' ? 'personal' : 'work';
     f_type = 'event';
@@ -1222,6 +1350,8 @@ function openItemSheet(id){
     document.getElementById('f-endDate').value = '';
     document.getElementById('f-endTime').value = '';
     document.getElementById('f-memo').value = '';
+    document.getElementById('f-pinned').checked = false;
+    updateFieldVisibility();
   }
   updateCalSegUI(); updateTypeSegUI();
   document.getElementById('itemBackdrop').classList.add('open');
@@ -1230,15 +1360,28 @@ function closeItemSheet(){ document.getElementById('itemBackdrop').classList.rem
 
 document.getElementById('calSeg').addEventListener('click', e=>{
   const btn = e.target.closest('button'); if(!btn) return;
-  f_cal = btn.dataset.v; updateCalSegUI();
+  f_cal = btn.dataset.v; updateCalSegUI(); updateFieldVisibility();
 });
 function updateCalSegUI(){ [...document.getElementById('calSeg').children].forEach(b=>b.classList.toggle('active', b.dataset.v===f_cal)); }
 
 document.getElementById('typeSeg').addEventListener('click', e=>{
   const btn = e.target.closest('button'); if(!btn) return;
-  f_type = btn.dataset.v; updateTypeSegUI();
+  f_type = btn.dataset.v; updateTypeSegUI(); updateFieldVisibility();
 });
 function updateTypeSegUI(){ [...document.getElementById('typeSeg').children].forEach(b=>b.classList.toggle('active', b.dataset.v===f_type)); }
+
+function updateFieldVisibility(){
+  const showPerson = (f_cal==='personal' && f_type==='todo');
+  document.getElementById('f-person-field').style.display = showPerson ? 'block' : 'none';
+  if(showPerson) populatePersonSelect();
+  document.getElementById('f-pinned-field').style.display = (f_cal==='work') ? 'block' : 'none';
+}
+function populatePersonSelect(selectedId){
+  const sel = document.getElementById('f-person');
+  sel.innerHTML = '<option value="">지정 안 함</option>' +
+    (settings.personalCategories||[]).map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
+  sel.value = selectedId || '';
+}
 
 function saveItem(){
   const title = document.getElementById('f-title').value.trim();
@@ -1248,15 +1391,18 @@ function saveItem(){
   const endDate = document.getElementById('f-endDate').value || startDate;
   const endTime = document.getElementById('f-endTime').value || null;
   const memo = document.getElementById('f-memo').value.trim();
+  const person = (f_cal==='personal' && f_type==='todo') ? (document.getElementById('f-person').value || null) : null;
+  const pinned = (f_cal==='work') ? document.getElementById('f-pinned').checked : false;
 
   let savedItem;
   if(editingId){
     const it = items.find(x=>x.id===editingId);
     it.title=title; it.calendar=f_cal; it.type=f_type;
     it.startDate=startDate; it.startTime=startTime; it.endDate=endDate; it.endTime=endTime; it.memo=memo;
+    it.person=person; it.pinned=pinned;
     savedItem = it;
   } else {
-    savedItem = {id:uid(), type:f_type, calendar:f_cal, title, startDate, startTime, endDate, endTime, memo, done:false, important:false};
+    savedItem = {id:uid(), type:f_type, calendar:f_cal, title, startDate, startTime, endDate, endTime, memo, done:false, important:false, person, pinned};
     items.push(savedItem);
   }
   saveAll();
