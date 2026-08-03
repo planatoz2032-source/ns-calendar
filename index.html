@@ -191,10 +191,29 @@
 const STORAGE_KEY = 'ns_dashboard_items_v1';
 const SETTINGS_KEY = 'ns_dashboard_settings_v1';
 
-let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+const DEFAULT_ITEMS = [
+  {id:'seed-w1', type:'event', title:'아이오티웍스 미팅 (구디점)', date:'2026-08-03', time:'10:30', allDay:false, calendar:'work', memo:'Google 캘린더에서 가져옴', done:false},
+  {id:'seed-w2', type:'event', title:'백본팀사무실_관리비납부', date:'2026-08-05', time:null, allDay:true, calendar:'work', memo:'Google 캘린더에서 가져옴', done:false},
+  {id:'seed-w3', type:'event', title:'외주용역정기지급', date:'2026-08-05', time:null, allDay:true, calendar:'work', memo:'Google 캘린더에서 가져옴', done:false},
+  {id:'seed-w4', type:'event', title:'💸 지점수익이체', date:'2026-08-05', time:null, allDay:true, calendar:'work', memo:'Google 캘린더에서 가져옴', done:false},
+  {id:'seed-p1', type:'event', title:'칼럼_파파님', date:'2026-08-03', time:null, allDay:true, calendar:'personal', memo:'Google 캘린더에서 가져옴', done:false},
+  {id:'seed-p2', type:'event', title:'수영님, 민정님 점심', date:'2026-08-04', time:'12:00', allDay:false, calendar:'personal', memo:'Google 캘린더에서 가져옴', done:false},
+  {id:'seed-p3', type:'event', title:'이엠365', date:'2026-08-06', time:null, allDay:true, calendar:'personal', memo:'Google 캘린더에서 가져옴', done:false},
+  {id:'seed-p4', type:'event', title:'건대점 방문', date:'2026-08-06', time:'09:00', allDay:false, calendar:'personal', memo:'09:00~18:00 · Google 캘린더에서 가져옴', done:false},
+  {id:'seed-p5', type:'event', title:'연세발달(언어)', date:'2026-08-06', time:'18:00', allDay:false, calendar:'personal', memo:'Google 캘린더에서 가져옴', done:false},
+  {id:'seed-p6', type:'event', title:'연세발달(언어)', date:'2026-08-07', time:'16:20', allDay:false, calendar:'personal', memo:'Google 캘린더에서 가져옴', done:false},
+  {id:'seed-p7', type:'event', title:'연세발달(감통)', date:'2026-08-07', time:'17:10', allDay:false, calendar:'personal', memo:'Google 캘린더에서 가져옴', done:false},
+  {id:'seed-t1', type:'todo', title:'NS2709 ~9/7 TV 4950원 채널 20개 해지', date:'2026-09-01', time:null, allDay:true, calendar:'none', memo:'Google 캘린더 할일에서 가져옴', done:false},
+];
+
+let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
 if(!settings.work) settings.work = 'ns.cho@thebuilders.co.kr';
 if(!settings.personal) settings.personal = 'planatoz2032@gmail.com';
+if(items === null){
+  items = DEFAULT_ITEMS.map(x=>({...x}));
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+}
 
 let currentFilter = 'all';
 let editingId = null;
