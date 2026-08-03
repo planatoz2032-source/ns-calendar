@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>My Planner</title>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     color-scheme: light;
@@ -330,6 +331,146 @@ function gcalUrl(it){
   const email = it.calendar==='work' ? settings.work : settings.personal;
   if(email) url += `&authuser=${encodeURIComponent(email)}`;
   return url;
+}
+
+/* ---------------- Google Calendar 양방향 연동 (개인 계정) ---------------- */
+let gAccessToken = null;
+let gTokenExpiry = 0;
+let gTokenClient = null;
+
+function isGoogleConnected(){ return !!(gAccessToken && Date.now() < gTokenExpiry); }
+
+function ensureTokenClient(){
+  if(!settings.clientId) return null;
+  if(typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) return null;
+  if(!gTokenClient || gTokenClient.__clientId !== settings.clientId){
+    gTokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: settings.clientId,
+      scope: 'https://www.googleapis.com/auth/calendar',
+      callback: (resp)=>{
+        if(resp && resp.access_token){
+          gAccessToken = resp.access_token;
+          gTokenExpiry = Date.now() + (resp.expires_in*1000 - 60000);
+          if(currentTab==='settings') renderSettings();
+          syncFromGoogle(false);
+        }
+      },
+      error_callback: (err)=>{ console.warn('google auth error', err); }
+    });
+    gTokenClient.__clientId = settings.clientId;
+  }
+  return gTokenClient;
+}
+function connectGoogle(){
+  const tc = ensureTokenClient();
+  if(!tc){ alert('Google 로그인 준비 중이에요. 잠시 후 다시 시도해주세요.'); return; }
+  tc.requestAccessToken({prompt:'consent'});
+}
+function tryAutoConnect(){
+  if(!settings.clientId) return;
+  const tc = ensureTokenClient();
+  if(!tc) return;
+  try{ tc.requestAccessToken({prompt:''}); }catch(e){ /* ignore */ }
+}
+function disconnectGoogle(){
+  gAccessToken = null; gTokenExpiry = 0;
+  if(currentTab==='settings') renderSettings();
+}
+
+async function gFetch(url, opts){
+  opts = opts || {};
+  opts.headers = Object.assign({}, opts.headers, {Authorization:'Bearer '+gAccessToken});
+  const res = await fetch(url, opts);
+  if(!res.ok){ const t = await res.text(); throw new Error('Google API '+res.status+': '+t.slice(0,200)); }
+  if(res.status===204) return null;
+  return res.json();
+}
+
+function googleEventToItem(ev, calendarId){
+  const existing = items.find(it=>it.googleEventId===ev.id);
+  const allDay = !!ev.start.date;
+  return {
+    id: existing ? existing.id : uid(),
+    type: 'event', calendar: 'personal',
+    title: ev.summary || '(제목 없음)',
+    startDate: allDay ? ev.start.date : ev.start.dateTime.slice(0,10),
+    startTime: allDay ? null : ev.start.dateTime.slice(11,16),
+    endDate: allDay ? addDays(ev.end.date, -1) : ev.end.dateTime.slice(0,10),
+    endTime: allDay ? null : ev.end.dateTime.slice(11,16),
+    memo: ev.location || ev.description || '',
+    done: existing ? existing.done : false,
+    googleEventId: ev.id, googleCalendarId: calendarId
+  };
+}
+
+async function syncFromGoogle(manual){
+  if(!isGoogleConnected()){ if(manual) alert('먼저 개인 캘린더를 연결해주세요.'); return; }
+  try{
+    const calList = await gFetch('https://www.googleapis.com/calendar/v3/users/me/calendarList');
+    const selectedCals = (calList.items||[]).filter(c=>c.selected);
+    const timeMin = new Date(); timeMin.setDate(timeMin.getDate()-14);
+    const timeMax = new Date(); timeMax.setDate(timeMax.getDate()+90);
+    let fetched = [];
+    for(const cal of selectedCals){
+      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?singleEvents=true&maxResults=250&orderBy=startTime&timeMin=${encodeURIComponent(timeMin.toISOString())}&timeMax=${encodeURIComponent(timeMax.toISOString())}`;
+      const data = await gFetch(url);
+      (data.items||[]).forEach(ev=>{
+        if(ev.status==='cancelled' || !ev.start) return;
+        fetched.push(googleEventToItem(ev, cal.id));
+      });
+    }
+    const fetchedIds = new Set(fetched.map(f=>f.googleEventId));
+    // 실제 연동 전 보여줬던 데모 시드 데이터(개인/이벤트, googleEventId 없음)는 실제 데이터로 교체
+    items = items.filter(it => !(it.calendar==='personal' && it.type==='event' && !it.googleEventId));
+    items = items.filter(it => !(it.googleEventId && !fetchedIds.has(it.googleEventId)));
+    fetched.forEach(f=>{
+      const idx = items.findIndex(it=>it.googleEventId===f.googleEventId);
+      if(idx>=0) items[idx] = f; else items.push(f);
+    });
+    saveAll();
+    renderAll();
+    if(manual) alert('동기화 완료 ('+fetched.length+'개 일정, 선택된 캘린더 '+selectedCals.length+'개)');
+  }catch(e){
+    console.error(e);
+    if(manual) alert('동기화 중 오류가 발생했어요: '+e.message);
+  }
+}
+
+function itemToGoogleEvent(item){
+  const ev = {summary:item.title, description:item.memo||''};
+  if(item.startTime){
+    const eD = item.endDate||item.startDate, eT = item.endTime||item.startTime;
+    ev.start = {dateTime:`${item.startDate}T${item.startTime}:00`, timeZone:'Asia/Seoul'};
+    ev.end = {dateTime:`${eD}T${eT}:00`, timeZone:'Asia/Seoul'};
+  } else {
+    ev.start = {date:item.startDate};
+    ev.end = {date:addDays(item.endDate||item.startDate,1)};
+  }
+  return ev;
+}
+async function pushItemToGoogle(item){
+  if(!isGoogleConnected() || item.type!=='event' || item.calendar!=='personal') return;
+  const calId = item.googleCalendarId || 'primary';
+  const body = itemToGoogleEvent(item);
+  try{
+    if(item.googleEventId){
+      await gFetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events/${item.googleEventId}`,
+        {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    } else {
+      const created = await gFetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`,
+        {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+      item.googleEventId = created.id;
+      item.googleCalendarId = calId;
+      saveAll();
+    }
+  }catch(e){ console.error('구글 캘린더 등록 실패', e); }
+}
+async function deleteItemFromGoogle(item){
+  if(!isGoogleConnected() || !item.googleEventId) return;
+  try{
+    await gFetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(item.googleCalendarId||'primary')}/events/${item.googleEventId}`,
+      {method:'DELETE'});
+  }catch(e){ console.error('구글 캘린더 삭제 실패', e); }
 }
 
 /* ---------------- top header + chips + viewtabs ---------------- */
@@ -675,29 +816,56 @@ function renderItemRow(it){
 /* ---------------- SETTINGS ---------------- */
 function renderSettings(){
   const el = document.getElementById('screenSettings');
+  const connected = isGoogleConnected();
   el.innerHTML = `
     <div class="field">
-      <label>회사 Google 계정</label>
+      <label>회사 Google 계정 (원클릭 등록용)</label>
       <input type="text" id="s-work" placeholder="ns.cho@thebuilders.co.kr">
     </div>
-    <div class="field">
-      <label>개인 Google 계정</label>
-      <input type="text" id="s-personal" placeholder="you@gmail.com">
-    </div>
     <div class="settings-note">
-      "G캘린더에 추가" 버튼을 누르면 해당 계정으로 미리 채워진 새 일정 화면이 새 탭에서 열려요. 마지막에 "저장"만 누르면 실제 캘린더에 등록됩니다.
+      회사 캘린더는 "G캘린더에 추가" 버튼으로 미리 채워진 화면을 열어 한 번 클릭으로 등록해요 (자동 양방향 연동 아님).
     </div>
-    <div class="sheet-actions" style="margin-top:16px;">
+
+    <div class="field" style="margin-top:20px;">
+      <label>개인 캘린더 양방향 연동</label>
+      <input type="text" id="s-clientid" placeholder="Google OAuth 클라이언트 ID (xxxx.apps.googleusercontent.com)">
+    </div>
+    <div class="settings-note">개인 Gmail용 Google Cloud OAuth 클라이언트 ID를 붙여넣어 주세요.</div>
+
+    <div class="sheet-actions" style="margin-top:12px;">
+      <button class="btn-primary" onclick="saveSettingsAndConnect()" style="width:100%;">
+        ${connected ? '개인 캘린더 연결 상태: 연결됨 · 다시 로그인' : '개인 캘린더 연결하기'}
+      </button>
+    </div>
+    <div id="gconnect-status" class="settings-note" style="margin-top:8px;">
+      ${connected ? '✅ 연결됨 — 선택(체크)된 캘린더만 가져옵니다.' : '아직 연결 안 됨'}
+    </div>
+    ${connected ? `
+    <div class="sheet-actions" style="margin-top:8px;">
+      <button class="btn-ghost" onclick="syncFromGoogle(true)" style="width:100%;">지금 다시 동기화</button>
+    </div>
+    <div class="sheet-actions" style="margin-top:8px;">
+      <button class="btn-danger" onclick="disconnectGoogle()" style="width:100%;">연결 해제</button>
+    </div>` : ''}
+
+    <div class="sheet-actions" style="margin-top:20px;">
       <button class="btn-primary" onclick="saveSettings()" style="width:100%;">저장</button>
     </div>`;
   document.getElementById('s-work').value = settings.work || '';
-  document.getElementById('s-personal').value = settings.personal || '';
+  document.getElementById('s-clientid').value = settings.clientId || '';
 }
 function saveSettings(){
   settings.work = document.getElementById('s-work').value.trim();
-  settings.personal = document.getElementById('s-personal').value.trim();
+  settings.clientId = document.getElementById('s-clientid').value.trim();
   saveSettingsToStorage();
   alert('저장했어요.');
+}
+function saveSettingsAndConnect(){
+  settings.work = document.getElementById('s-work').value.trim();
+  settings.clientId = document.getElementById('s-clientid').value.trim();
+  saveSettingsToStorage();
+  if(!settings.clientId){ alert('Google 클라이언트 ID를 먼저 입력해주세요.'); return; }
+  connectGoogle();
 }
 
 /* ---------------- item add/edit sheet ---------------- */
@@ -751,19 +919,25 @@ function saveItem(){
   const endTime = document.getElementById('f-endTime').value || null;
   const memo = document.getElementById('f-memo').value.trim();
 
+  let savedItem;
   if(editingId){
     const it = items.find(x=>x.id===editingId);
     it.title=title; it.calendar=f_cal; it.type=f_type;
     it.startDate=startDate; it.startTime=startTime; it.endDate=endDate; it.endTime=endTime; it.memo=memo;
+    savedItem = it;
   } else {
-    items.push({id:uid(), type:f_type, calendar:f_cal, title, startDate, startTime, endDate, endTime, memo, done:false});
+    savedItem = {id:uid(), type:f_type, calendar:f_cal, title, startDate, startTime, endDate, endTime, memo, done:false};
+    items.push(savedItem);
   }
   saveAll();
   closeItemSheet();
   renderAll();
+  pushItemToGoogle(savedItem);
 }
 function deleteCurrentItem(){
   if(!editingId) return;
+  const it = items.find(x=>x.id===editingId);
+  if(it) deleteItemFromGoogle(it);
   items = items.filter(x=>x.id!==editingId);
   saveAll();
   closeItemSheet();
@@ -802,6 +976,7 @@ function renderAll(){
 }
 
 renderAll();
+window.addEventListener('load', ()=>{ setTimeout(tryAutoConnect, 400); });
 </script>
 </body>
 </html>
