@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>My Planner</title>
+<title>NS Planner</title>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
@@ -66,27 +66,33 @@
   .cal-legend span{display:inline-flex; align-items:center; gap:4px;}
   .legend-dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
 
-  /* cards */
-  .quad{display:grid; grid-template-columns:1fr; gap:10px;}
-  .quad.single{grid-template-columns:1fr;}
-  .card{background:var(--card); border-radius:16px; padding:12px; border:1px solid var(--border); min-height:120px;}
-  .card .card-head{display:flex; align-items:center; justify-content:space-between; font-size:13px; font-weight:700; margin-bottom:8px;}
-  .card .card-head .dot{width:8px; height:8px; border-radius:50%; margin-right:6px;}
-  .card .card-head-title{display:flex; align-items:center;}
-  .card .more{font-size:11px; color:var(--sub); cursor:pointer;}
-  .card .row-item{display:flex; align-items:flex-start; gap:6px; font-size:12.5px; padding:4px 0; border-bottom:1px dashed var(--border);}
-  .card .row-item:last-child{border-bottom:none;}
-  .card .row-item .rt{color:var(--sub); flex:0 0 auto; font-size:11.5px; padding-top:1px;}
-  .card .row-item .rbody{flex:1; min-width:0;}
-  .card .row-item .rtitle{flex:1; word-break:break-word;}
-  .card .row-item .rmemo{font-size:11px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px;}
-  .card .row-item.done .rtitle{text-decoration:line-through; color:var(--done);}
+  /* home sections (회사 할일 / 개인 일정 / 개인 할일) */
   .star-btn{background:none; border:none; cursor:pointer; font-size:14px; line-height:1; padding:0 2px; flex:0 0 auto; color:#d0d3da;}
   .star-btn.important{color:#f5b400;}
-  .card .empty-mini{font-size:12px; color:var(--sub); padding:8px 0;}
-  .card .card-list{max-height:230px; overflow-y:auto;}
-  .cb-mini{width:15px; height:15px; border-radius:50%; border:2px solid var(--todo); flex:0 0 15px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:9px; color:#fff; margin-top:1px;}
-  .cb-mini.checked{background:var(--todo);}
+  .empty-mini{font-size:12px; color:var(--sub); padding:10px 4px;}
+
+  .hsec{background:var(--card); border-radius:16px; border:1px solid var(--border); margin-bottom:12px; overflow:hidden;}
+  .hsec-header{width:100%; display:flex; align-items:center; justify-content:space-between; background:none; border:none; padding:14px 14px 12px; cursor:pointer; text-align:left;}
+  .hsec-title{display:flex; align-items:center; font-size:14.5px; font-weight:700; color:var(--text);}
+  .hsec-icon{margin-right:6px; font-size:15px;}
+  .hsec-count{font-size:11.5px; font-weight:700; border-radius:999px; padding:1px 8px; margin-left:7px;}
+  .hsec-controls{display:flex; align-items:center; gap:8px;}
+  .hsec-toggle{width:30px; height:18px; border-radius:999px; position:relative; transition:background 0.15s;}
+  .hsec-toggle-dot{position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:left 0.15s;}
+  .hsec-toggle.on .hsec-toggle-dot{left:14px;}
+  .hsec-caret{color:var(--sub); font-size:12px;}
+  .hsec-body{padding:0 12px 10px;}
+  .hsec-row{display:flex; align-items:flex-start; gap:8px; padding:8px 4px; border-bottom:1px dashed var(--border); cursor:pointer;}
+  .hsec-row:last-of-type{border-bottom:none;}
+  .hsec-cb{width:17px; height:17px; border-radius:50%; flex:0 0 17px; margin-top:1px; cursor:pointer; accent-color:var(--todo);}
+  .hsec-date{flex:0 0 auto; font-size:12px; color:var(--sub); padding-top:2px; white-space:nowrap;}
+  .hsec-date.bold{font-weight:700; color:var(--text);}
+  .hsec-date-group{font-size:13px; font-weight:700; color:var(--text); margin:10px 2px 4px;}
+  .hsec-date-group:first-child{margin-top:2px;}
+  .hsec-main{flex:1; min-width:0;}
+  .hsec-line{font-size:13.5px; color:var(--text); word-break:break-word;}
+  .hsec-memo{font-size:11.5px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;}
+  .hsec-add{width:100%; text-align:left; background:none; border:none; color:var(--sub); font-size:12.5px; padding:8px 4px 2px; cursor:pointer; font-weight:600;}
 
   /* agenda list (schedule tab, day view + list) */
   .day-group{margin-bottom:16px;}
@@ -233,9 +239,10 @@
     <div class="field">
       <label>종류</label>
       <div class="seg" id="typeSeg">
-        <button data-v="event" class="active">일정</button>
+        <button data-v="event" class="active" id="typeSegEvent">일정</button>
         <button data-v="todo">할일</button>
       </div>
+      <div class="settings-note" id="typeSegNote" style="display:none; margin-top:6px;">회사 캘린더는 양방향 연동이 어려워 할일만 사용해요.</div>
     </div>
 
     <div class="field">
@@ -344,10 +351,6 @@ const STORAGE_KEY = 'ns_dashboard_items_v2';
 const SETTINGS_KEY = 'ns_dashboard_settings_v1';
 
 const DEFAULT_ITEMS = [
-  {id:'seed-w1', type:'event', calendar:'work', title:'아이오티웍스 미팅 (구디점)', startDate:'2026-08-03', startTime:'10:30', endDate:'2026-08-03', endTime:'11:30', memo:'Google 캘린더에서 가져옴', done:false},
-  {id:'seed-w2', type:'event', calendar:'work', title:'백본팀사무실_관리비납부', startDate:'2026-08-05', startTime:null, endDate:'2026-08-05', endTime:null, memo:'Google 캘린더에서 가져옴', done:false},
-  {id:'seed-w3', type:'event', calendar:'work', title:'외주용역정기지급', startDate:'2026-08-05', startTime:null, endDate:'2026-08-05', endTime:null, memo:'Google 캘린더에서 가져옴', done:false},
-  {id:'seed-w4', type:'event', calendar:'work', title:'💸 지점수익이체', startDate:'2026-08-05', startTime:null, endDate:'2026-08-05', endTime:null, memo:'Google 캘린더에서 가져옴', done:false},
   {id:'seed-w5', type:'todo', calendar:'work', title:'백본팀 정기미팅 자료 준비', startDate:'2026-08-11', startTime:null, endDate:null, endTime:null, memo:'', done:false},
   {id:'seed-p1', type:'event', calendar:'personal', title:'칼럼_파파님', startDate:'2026-08-03', startTime:null, endDate:'2026-08-03', endTime:null, memo:'Google 캘린더에서 가져옴', done:false},
   {id:'seed-p2', type:'event', calendar:'personal', title:'수영님, 민정님 점심', startDate:'2026-08-04', startTime:'12:00', endDate:'2026-08-04', endTime:'13:00', memo:'Google 캘린더에서 가져옴', done:false},
@@ -363,12 +366,18 @@ let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
 if(items === null){
   items = DEFAULT_ITEMS.map(x=>({...x}));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+} else {
+  // 회사 캘린더(일정) 기능은 제거됨 - 예전에 저장된 회사 일정은 정리
+  const beforeLen = items.length;
+  items = items.filter(it => !(it.calendar==='work' && it.type==='event'));
+  if(items.length !== beforeLen) localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
 if(!settings.work) settings.work = 'ns.cho@thebuilders.co.kr';
 if(!settings.personal) settings.personal = 'planatoz2032@gmail.com';
 if(!settings.clientId) settings.clientId = '860343908563-bktcmuc715dq7g18t0frmkraersltbgg.apps.googleusercontent.com';
 if(settings.homeCollapsed === undefined) settings.homeCollapsed = true;
+if(!settings.homeSections) settings.homeSections = {work_todo:true, personal_event:true, personal_todo:true};
 if(!settings.personalCategories) settings.personalCategories = [
   {id:'me', label:'나'}, {id:'son', label:'아들'}, {id:'family', label:'가족'}
 ];
@@ -596,8 +605,8 @@ function renderHeader(){
         <h1><button class="back-btn" onclick="currentTab='settings'; renderAll();">‹</button>🔁 정기 할일 관리</h1>
       </div>`;
   } else {
-    const titles = {home:'📅 My Planner', todo:'✅ 할일', settings:'⚙️ 설정'};
-    h.innerHTML = `<div class="title-row"><h1>${titles[currentTab]||'📅 My Planner'}</h1></div>`;
+    const titles = {home:'📅 NS Planner', todo:'✅ 할일', settings:'⚙️ 설정'};
+    h.innerHTML = `<div class="title-row"><h1>${titles[currentTab]||'📅 NS Planner'}</h1></div>`;
   }
 }
 function fmtFullDate(dateStr){
@@ -616,6 +625,20 @@ function personLabel(personId){
   if(!personId) return null;
   const c = (settings.personalCategories||[]).find(x=>x.id===personId);
   return c ? c.label : null;
+}
+// 홈 화면 박스용 축약 날짜 포맷: "08.05(수)"
+function compactDateLabel(dateStr){
+  if(!dateStr) return '';
+  const d = parseDate(dateStr);
+  return pad(d.getMonth()+1)+'.'+pad(d.getDate())+'('+weekdayKr(dateStr)+')';
+}
+function removeItem(id){
+  const it = items.find(x=>x.id===id);
+  if(!it) return;
+  if(it.googleEventId) deleteItemFromGoogle(it);
+  items = items.filter(x=>x.id!==id);
+  saveAll();
+  renderAll();
 }
 function weekRangeLabel(dateStr){
   const start = weekStart(dateStr);
@@ -685,18 +708,126 @@ function renderHome(){
 
   const showWork = currentFilter!=='personal';
   const showPersonal = currentFilter!=='work';
-  const quad = document.createElement('div');
-  quad.className = 'quad' + ((showWork&&showPersonal) ? '' : ' single');
 
   if(showWork){
-    quad.appendChild(buildCard('work','event','회사 일정','🔵'));
-    quad.appendChild(buildCard('work','todo','회사 할일','🔵'));
+    el.appendChild(buildHomeTodoSection('work', '회사 할일', '📋', 'var(--todo)'));
   }
   if(showPersonal){
-    quad.appendChild(buildCard('personal','event','개인 일정','🟢'));
-    quad.appendChild(buildCard('personal','todo','개인 할일','🟢'));
+    el.appendChild(buildHomeEventSection());
+    el.appendChild(buildHomeTodoSection('personal', '개인 할일', '📝', 'var(--todo)'));
   }
-  el.appendChild(quad);
+}
+
+function toggleHomeSection(key){
+  settings.homeSections[key] = !settings.homeSections[key];
+  saveSettingsToStorage();
+  renderAll();
+}
+
+function homeSectionHeader(key, icon, title, count, accentColor){
+  const open = settings.homeSections[key] !== false;
+  const header = document.createElement('button');
+  header.className = 'hsec-header';
+  header.innerHTML = `
+    <span class="hsec-title"><span class="hsec-icon">${icon}</span>${title}${count>0?`<span class="hsec-count" style="background:${accentColor}1a; color:${accentColor};">${count}</span>`:''}</span>
+    <span class="hsec-controls">
+      <span class="hsec-toggle${open?' on':''}" style="background:${open?accentColor:'#d9dce3'};"><span class="hsec-toggle-dot"></span></span>
+      <span class="hsec-caret">${open?'▾':'▸'}</span>
+    </span>`;
+  header.onclick = ()=> toggleHomeSection(key);
+  return header;
+}
+
+function buildHomeRow(it, {leftLabel, bold}={}){
+  const row = document.createElement('div'); row.className='hsec-row';
+  const cb = document.createElement('input'); cb.type='checkbox'; cb.className='hsec-cb';
+  cb.onclick = (e)=>{ e.stopPropagation(); removeItem(it.id); };
+  row.appendChild(cb);
+
+  if(it.calendar==='personal' && it.type==='todo' && personLabel(it.person)){
+    const pt = document.createElement('span'); pt.className='person-tag'; pt.textContent = personLabel(it.person);
+    row.appendChild(pt);
+  }
+
+  if(leftLabel!==undefined){
+    const d = document.createElement('span'); d.className='hsec-date'+(bold?' bold':'');
+    d.textContent = leftLabel;
+    row.appendChild(d);
+  }
+
+  const main = document.createElement('div'); main.className='hsec-main';
+  const line = document.createElement('div'); line.className='hsec-line'; line.textContent = it.title;
+  main.appendChild(line);
+  if(it.memo){ const m=document.createElement('div'); m.className='hsec-memo'; m.textContent=it.memo; main.appendChild(m); }
+  row.appendChild(main);
+
+  const star = document.createElement('button'); star.className='star-btn'+(it.important?' important':'');
+  star.textContent = it.important?'★':'☆';
+  star.onclick = (e)=>{ e.stopPropagation(); it.important=!it.important; saveAll(); renderAll(); };
+  row.appendChild(star);
+
+  row.onclick = ()=> openItemSheet(it.id);
+  return row;
+}
+
+function buildHomeTodoSection(cal, title, icon, accentColor){
+  let list = items.filter(it=>it.calendar===cal && it.type==='todo' && !it.done);
+  if(cal==='work') list = list.filter(it=>it.pinned); // 내 업무로 선택된 것만 홈에 표시
+  list = list.sort((a,b)=> ((b.important?1:0)-(a.important?1:0)) || (a.startDate||'9999').localeCompare(b.startDate||'9999'));
+
+  const box = document.createElement('div'); box.className='hsec';
+  const key = cal+'_todo';
+  box.appendChild(homeSectionHeader(key, icon, title, list.length, accentColor));
+
+  const open = settings.homeSections[key] !== false;
+  if(open){
+    const body = document.createElement('div'); body.className='hsec-body';
+    if(list.length===0){
+      const e = document.createElement('div'); e.className='empty-mini';
+      e.textContent = (cal==='work') ? '표시할 항목이 없어요 (✎에서 "내 업무"로 표시해보세요)' : '할일이 없어요.';
+      body.appendChild(e);
+    }
+    list.slice(0,15).forEach(it=> body.appendChild(buildHomeRow(it, {leftLabel: compactDateLabel(it.startDate)})));
+    const add = document.createElement('button'); add.className='hsec-add'; add.textContent='+ 할일 추가';
+    add.onclick = ()=> openItemSheet(null, {cal, type:'todo'});
+    body.appendChild(add);
+    box.appendChild(body);
+  }
+  return box;
+}
+
+function buildHomeEventSection(){
+  let list = items.filter(it=>it.calendar==='personal' && it.type==='event');
+  list = list.filter(it=> (it.endDate||it.startDate) >= todayStr());
+  list = list.sort((a,b)=> (a.startDate+ (a.startTime||'00:00')).localeCompare(b.startDate+(b.startTime||'00:00')));
+  list = list.slice(0,15);
+
+  const box = document.createElement('div'); box.className='hsec';
+  const key = 'personal_event';
+  box.appendChild(homeSectionHeader(key, '📅', '개인 일정', list.length, 'var(--personal)'));
+
+  const open = settings.homeSections[key] !== false;
+  if(open){
+    const body = document.createElement('div'); body.className='hsec-body';
+    if(list.length===0){
+      const e = document.createElement('div'); e.className='empty-mini'; e.textContent='다가오는 일정이 없어요.';
+      body.appendChild(e);
+    }
+    let lastDate = null;
+    list.forEach(it=>{
+      if(it.startDate !== lastDate){
+        const dg = document.createElement('div'); dg.className='hsec-date-group'; dg.textContent = compactDateLabel(it.startDate);
+        body.appendChild(dg);
+        lastDate = it.startDate;
+      }
+      body.appendChild(buildHomeRow(it, {leftLabel: it.startTime || '종일'}));
+    });
+    const add = document.createElement('button'); add.className='hsec-add'; add.textContent='+ 일정 추가';
+    add.onclick = ()=> openItemSheet(null, {cal:'personal', type:'event'});
+    body.appendChild(add);
+    box.appendChild(body);
+  }
+  return box;
 }
 
 function buildMiniCalendar(allowCollapse){
@@ -777,71 +908,6 @@ function buildMiniCalendar(allowCollapse){
     wrap.appendChild(legend);
   }
   return wrap;
-}
-
-function buildCard(cal, type, title, emoji){
-  const card = document.createElement('div');
-  card.className = 'card';
-  const head = document.createElement('div'); head.className='card-head';
-  head.innerHTML = `<span class="card-head-title"><span class="dot" style="background:${cal==='work'?'var(--work)':'var(--personal)'}"></span>${title}</span>`;
-  const more = document.createElement('span'); more.className='more'; more.textContent='더보기 ›';
-  more.onclick = ()=>{ currentFilter = cal; currentTab = (type==='event'?'schedule':'todo'); renderAll(); };
-  head.appendChild(more);
-  card.appendChild(head);
-
-  let list = items.filter(it=>it.calendar===cal && it.type===type);
-  if(cal==='work') list = list.filter(it=>it.pinned); // 내 업무로 선택된 것만 홈에 표시
-  if(type==='event'){
-    list = list.filter(it=> (it.endDate||it.startDate) >= todayStr());
-    list = list.sort((a,b)=> (a.startDate+ (a.startTime||'00:00')).localeCompare(b.startDate+(b.startTime||'00:00')));
-  } else {
-    list = list.sort((a,b)=> (a.done?1:0)-(b.done?1:0) || ((b.important?1:0)-(a.important?1:0)));
-  }
-  const shown = list.slice(0,10);
-  if(shown.length===0){
-    const e = document.createElement('div'); e.className='empty-mini';
-    e.textContent = (cal==='work') ? '선택된 항목이 없어요 (✎에서 "내 업무"로 표시해보세요)' : '없음';
-    card.appendChild(e);
-  }
-  const listWrap = document.createElement('div'); listWrap.className='card-list';
-  card.appendChild(listWrap);
-  shown.forEach(it=>{
-    const row = document.createElement('div');
-    row.className = 'row-item' + (it.done?' done':'');
-    if(cal==='personal' && type==='todo' && personLabel(it.person)){
-      const pt = document.createElement('span'); pt.className='person-tag'; pt.textContent = personLabel(it.person);
-      row.appendChild(pt);
-    }
-    if(cal==='personal' && type==='event'){
-      const t = document.createElement('span'); t.className='rt';
-      t.textContent = personalDateTimeLabel(it);
-      row.appendChild(t);
-    } else if(type==='event'){
-      const t = document.createElement('span'); t.className='rt';
-      t.textContent = it.startTime ? it.startTime : fmtFullDate(it.startDate);
-      row.appendChild(t);
-    }
-    if(type==='todo'){
-      const cb = document.createElement('div'); cb.className='cb-mini'+(it.done?' checked':'');
-      cb.textContent = it.done?'✓':'';
-      cb.onclick=(e)=>{ e.stopPropagation(); it.done=!it.done; saveAll(); renderAll(); };
-      row.appendChild(cb);
-    }
-    const body = document.createElement('span'); body.className='rbody';
-    const rt = document.createElement('div'); rt.className='rtitle'; rt.textContent = it.title;
-    body.appendChild(rt);
-    if(it.memo){ const rm=document.createElement('div'); rm.className='rmemo'; rm.textContent=it.memo; body.appendChild(rm); }
-    row.appendChild(body);
-    if(type==='todo'){
-      const star = document.createElement('button'); star.className='star-btn'+(it.important?' important':'');
-      star.textContent = it.important?'★':'☆';
-      star.onclick=(e)=>{ e.stopPropagation(); it.important=!it.important; saveAll(); renderAll(); };
-      row.appendChild(star);
-    }
-    row.onclick = ()=> openItemSheet(it.id);
-    listWrap.appendChild(row);
-  });
-  return card;
 }
 
 /* ---------------- SCHEDULE ---------------- */
@@ -1234,14 +1300,6 @@ function renderSettings(){
     <div class="settings-note">개인 할일 등록 시 이 구분을 선택하면 할일 맨 앞에 태그로 표시돼요. 이름을 눌러 수정하거나 🗑로 삭제할 수 있어요.</div>
 
     <div class="field" style="margin-top:20px;">
-      <label>회사 Google 계정 (원클릭 등록용)</label>
-      <input type="text" id="s-work" placeholder="ns.cho@thebuilders.co.kr">
-    </div>
-    <div class="settings-note">
-      회사 캘린더는 "G캘린더에 추가" 버튼으로 미리 채워진 화면을 열어 한 번 클릭으로 등록해요 (자동 양방향 연동 아님).
-    </div>
-
-    <div class="field" style="margin-top:20px;">
       <label>개인 캘린더 양방향 연동</label>
       <input type="text" id="s-clientid" placeholder="Google OAuth 클라이언트 ID (xxxx.apps.googleusercontent.com)">
     </div>
@@ -1266,7 +1324,6 @@ function renderSettings(){
     <div class="sheet-actions" style="margin-top:20px;">
       <button class="btn-primary" onclick="saveSettings()" style="width:100%;">저장</button>
     </div>`;
-  document.getElementById('s-work').value = settings.work || '';
   document.getElementById('s-clientid').value = settings.clientId || '';
   renderPersonCatList();
 }
@@ -1310,13 +1367,11 @@ function deletePersonCategory(id){
   renderPersonCatList();
 }
 function saveSettings(){
-  settings.work = document.getElementById('s-work').value.trim();
   settings.clientId = document.getElementById('s-clientid').value.trim();
   saveSettingsToStorage();
   alert('저장했어요.');
 }
 function saveSettingsAndConnect(){
-  settings.work = document.getElementById('s-work').value.trim();
   settings.clientId = document.getElementById('s-clientid').value.trim();
   saveSettingsToStorage();
   if(!settings.clientId){ alert('Google 클라이언트 ID를 먼저 입력해주세요.'); return; }
@@ -1324,7 +1379,7 @@ function saveSettingsAndConnect(){
 }
 
 /* ---------------- item add/edit sheet ---------------- */
-function openItemSheet(id){
+function openItemSheet(id, preset){
   editingId = id || null;
   document.getElementById('itemSheetTitle').textContent = id ? '항목 수정' : '새 항목';
   document.getElementById('deleteBtn').style.display = id ? 'block':'none';
@@ -1342,8 +1397,8 @@ function openItemSheet(id){
     updateFieldVisibility();
     populatePersonSelect(it.person);
   } else {
-    f_cal = currentFilter==='personal' ? 'personal' : 'work';
-    f_type = 'event';
+    f_cal = (preset && preset.cal) || (currentFilter==='personal' ? 'personal' : 'work');
+    f_type = (preset && preset.type) || 'event';
     document.getElementById('f-title').value = '';
     document.getElementById('f-startDate').value = selectedDate;
     document.getElementById('f-startTime').value = '';
@@ -1371,6 +1426,11 @@ document.getElementById('typeSeg').addEventListener('click', e=>{
 function updateTypeSegUI(){ [...document.getElementById('typeSeg').children].forEach(b=>b.classList.toggle('active', b.dataset.v===f_type)); }
 
 function updateFieldVisibility(){
+  const isWork = (f_cal==='work');
+  document.getElementById('typeSegEvent').style.display = isWork ? 'none' : 'block';
+  document.getElementById('typeSegNote').style.display = isWork ? 'block' : 'none';
+  if(isWork && f_type==='event'){ f_type='todo'; updateTypeSegUI(); }
+
   const showPerson = (f_cal==='personal' && f_type==='todo');
   document.getElementById('f-person-field').style.display = showPerson ? 'block' : 'none';
   if(showPerson) populatePersonSelect();
