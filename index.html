@@ -93,6 +93,8 @@
   .hsec-date-group:first-child{margin-top:2px;}
   .hsec-main{flex:1; min-width:0;}
   .hsec-line{font-size:13.5px; color:var(--text); word-break:break-word;}
+  .hsec-row.is-done .hsec-line{text-decoration:line-through; color:var(--done);}
+  .hsec-row.is-done{opacity:0.75;}
   .hsec-memo{font-size:11.5px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;}
   .hsec-add{width:100%; text-align:left; background:none; border:none; color:var(--sub); font-size:12.5px; padding:8px 4px 2px; cursor:pointer; font-weight:600;}
 
@@ -152,6 +154,21 @@
   .week-chip.work{background:var(--work);}
   .week-chip.personal{background:var(--personal);}
   .week-chip.todo{background:var(--todo);}
+
+  /* gantt chart */
+  .gantt-filters{display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;}
+  .gantt-filter-chip{font-size:12.5px; padding:6px 12px; border-radius:999px; border:1.5px solid; cursor:pointer; font-weight:600;}
+  .gantt-chart{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:10px 10px 4px; overflow-x:auto;}
+  .gantt-chart-inner{min-width:100%;}
+  .gantt-header-row{display:flex; margin-bottom:4px;}
+  .gantt-row{display:flex; align-items:center; min-height:32px; border-top:1px solid var(--border);}
+  .gantt-header-row .gantt-track{height:20px;}
+  .gantt-row-label{flex:0 0 92px; font-size:11px; color:var(--sub); padding-right:6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .gantt-track{flex:1; position:relative; height:26px;}
+  .gantt-tick{position:absolute; top:0; bottom:0; font-size:10px; color:var(--sub); text-align:center; border-left:1px solid var(--border); padding-top:2px; box-sizing:border-box;}
+  .gantt-tick.today{color:var(--work); font-weight:700;}
+  .gantt-bar{position:absolute; top:3px; height:20px; border-radius:6px; cursor:pointer; color:#fff; font-size:10px; line-height:20px; padding:0 6px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .gantt-bar.done{opacity:0.4; text-decoration:line-through;}
 
   /* bottom nav */
   #bottomNav{
@@ -414,7 +431,9 @@ function persistRecurring(){ localStorage.setItem(RECURRING_KEY, JSON.stringify(
 
 let currentTab = 'home';
 let currentFilter = 'all'; // all | work | personal
-let scheduleView = 'day'; // day | week | month
+let scheduleView = 'day'; // day | week | month | gantt
+let ganttScale = 'month'; // week | month | year
+let ganttFilters = {personal_event:true, work_todo:true, personal_todo:true};
 let selectedDate = todayStr(); // for home mini-cal + day view + month agenda
 let editingId = null;
 let f_cal = 'work';
@@ -614,7 +633,11 @@ async function deleteItemFromGoogle(item){
 function renderHeader(){
   const h = document.getElementById('topHeader');
   if(currentTab==='schedule'){
-    const label = scheduleView==='month'
+    const label = scheduleView==='gantt'
+      ? (ganttScale==='year' ? parseDate(selectedDate).getFullYear()+'년'
+         : ganttScale==='month' ? parseDate(selectedDate).getFullYear()+'년 '+(parseDate(selectedDate).getMonth()+1)+'월'
+         : weekRangeLabel(selectedDate))
+      : scheduleView==='month'
       ? parseDate(selectedDate).getFullYear()+'년 '+(parseDate(selectedDate).getMonth()+1)+'월'
       : scheduleView==='week'
       ? weekRangeLabel(selectedDate)
@@ -688,6 +711,11 @@ function shiftDate(dir){
   if(currentTab==='schedule'){
     if(scheduleView==='day') selectedDate = addDays(selectedDate, dir);
     else if(scheduleView==='week') selectedDate = addDays(selectedDate, dir*7);
+    else if(scheduleView==='gantt'){
+      if(ganttScale==='week') selectedDate = addDays(selectedDate, dir*7);
+      else if(ganttScale==='year'){ const d=parseDate(selectedDate); d.setFullYear(d.getFullYear()+dir); selectedDate = toDateStr(d); }
+      else { const d=parseDate(selectedDate); d.setMonth(d.getMonth()+dir); selectedDate = toDateStr(d); }
+    }
     else { const d=parseDate(selectedDate); d.setMonth(d.getMonth()+dir); selectedDate = toDateStr(d); }
   }
   renderAll();
@@ -723,7 +751,7 @@ function renderViewTabs(){
   if(currentTab!=='schedule'){ el.hidden = true; return; }
   el.hidden = false;
   el.innerHTML = '';
-  [['day','일'],['week','주'],['month','월']].forEach(([v,label])=>{
+  [['day','일'],['week','주'],['month','월'],['gantt','차트']].forEach(([v,label])=>{
     const b = document.createElement('button');
     b.className = (scheduleView===v?'active':'');
     b.textContent = label;
@@ -795,10 +823,17 @@ function homeSectionHeader(key, icon, title, count, accentColor){
   return header;
 }
 
-function buildHomeRow(it, {leftLabel, bold}={}){
-  const row = document.createElement('div'); row.className='hsec-row';
+let doneSectionsOpen = {};
+
+function buildHomeRow(it, {leftLabel, bold, doneMode}={}){
+  const row = document.createElement('div'); row.className='hsec-row'+(doneMode?' is-done':'');
   const cb = document.createElement('input'); cb.type='checkbox'; cb.className='hsec-cb';
-  cb.onclick = (e)=>{ e.stopPropagation(); removeItem(it.id); };
+  cb.checked = !!doneMode;
+  if(doneMode){
+    cb.onclick = (e)=>{ e.stopPropagation(); it.done=false; saveAll(); renderAll(); }; // 체크 해제 = 다시 진행중으로 복구
+  } else {
+    cb.onclick = (e)=>{ e.stopPropagation(); it.done=true; saveAll(); renderAll(); }; // 체크 = 완료 처리 (삭제 아님)
+  }
   row.appendChild(cb);
 
   if(it.calendar==='personal' && it.type==='todo' && personLabel(it.person)){
@@ -818,18 +853,40 @@ function buildHomeRow(it, {leftLabel, bold}={}){
   if(it.memo){ const m=document.createElement('div'); m.className='hsec-memo'; m.textContent=it.memo; main.appendChild(m); }
   row.appendChild(main);
 
-  const star = document.createElement('button'); star.className='star-btn'+(it.important?' important':'');
-  star.textContent = it.important?'★':'☆';
-  star.onclick = (e)=>{ e.stopPropagation(); it.important=!it.important; saveAll(); renderAll(); };
-  row.appendChild(star);
+  if(doneMode){
+    const del = document.createElement('button'); del.className='star-btn'; del.title='완전히 삭제';
+    del.textContent = '🗑';
+    del.onclick = (e)=>{ e.stopPropagation(); removeItem(it.id); };
+    row.appendChild(del);
+  } else {
+    const star = document.createElement('button'); star.className='star-btn'+(it.important?' important':'');
+    star.textContent = it.important?'★':'☆';
+    star.onclick = (e)=>{ e.stopPropagation(); it.important=!it.important; saveAll(); renderAll(); };
+    row.appendChild(star);
+  }
 
   row.onclick = ()=> openItemSheet(it.id);
   return row;
 }
 
+function buildDoneToggle(key, doneList, body, labelFn){
+  if(doneList.length===0) return;
+  labelFn = labelFn || (it=>compactDateLabel(it.startDate));
+  const toggleBtn = document.createElement('button'); toggleBtn.className='hsec-add';
+  const isOpen = !!doneSectionsOpen[key];
+  toggleBtn.textContent = (isOpen?'▾ ':'▸ ')+'완료됨 '+doneList.length+'개 보기';
+  toggleBtn.onclick = ()=>{ doneSectionsOpen[key] = !doneSectionsOpen[key]; renderAll(); };
+  body.appendChild(toggleBtn);
+  if(isOpen){
+    doneList.forEach(it=> body.appendChild(buildHomeRow(it, {leftLabel: labelFn(it), doneMode:true})));
+  }
+}
+
 function buildHomeTodoSection(cal, title, icon, accentColor, tintColor){
   let list = items.filter(it=>it.calendar===cal && it.type==='todo' && !it.done);
   list = list.sort((a,b)=> ((b.important?1:0)-(a.important?1:0)) || (a.startDate||'9999').localeCompare(b.startDate||'9999'));
+  const doneList = items.filter(it=>it.calendar===cal && it.type==='todo' && it.done)
+    .sort((a,b)=> (b.startDate||'').localeCompare(a.startDate||''));
 
   const box = document.createElement('div'); box.className='hsec';
   box.style.background = tintColor;
@@ -848,16 +905,19 @@ function buildHomeTodoSection(cal, title, icon, accentColor, tintColor){
     const add = document.createElement('button'); add.className='hsec-add'; add.textContent='+ 할일 추가';
     add.onclick = ()=> openItemSheet(null, {cal, type:'todo'});
     body.appendChild(add);
+    buildDoneToggle(key+'_done', doneList, body);
     box.appendChild(body);
   }
   return box;
 }
 
 function buildHomeEventSection(){
-  let list = items.filter(it=>it.calendar==='personal' && it.type==='event');
+  let list = items.filter(it=>it.calendar==='personal' && it.type==='event' && !it.done);
   list = list.filter(it=> (it.endDate||it.startDate) >= todayStr());
   list = list.sort((a,b)=> (a.startDate+ (a.startTime||'00:00')).localeCompare(b.startDate+(b.startTime||'00:00')));
   list = list.slice(0,15);
+  const doneList = items.filter(it=>it.calendar==='personal' && it.type==='event' && it.done)
+    .sort((a,b)=> (b.startDate||'').localeCompare(a.startDate||''));
 
   const box = document.createElement('div'); box.className='hsec';
   box.style.background = '#eefaf3';
@@ -883,6 +943,7 @@ function buildHomeEventSection(){
     const add = document.createElement('button'); add.className='hsec-add'; add.textContent='+ 일정 추가';
     add.onclick = ()=> openItemSheet(null, {cal:'personal', type:'event'});
     body.appendChild(add);
+    buildDoneToggle(key+'_done', doneList, body, it=>personalDateTimeLabel(it));
     box.appendChild(body);
   }
   return box;
@@ -974,6 +1035,7 @@ function renderSchedule(){
   el.innerHTML = '';
   if(scheduleView==='day') el.appendChild(buildDayView());
   else if(scheduleView==='week') el.appendChild(buildWeekView());
+  else if(scheduleView==='gantt') el.appendChild(buildGanttView());
   else el.appendChild(buildMonthView());
 }
 
@@ -1053,6 +1115,138 @@ function buildMonthView(){
     wrap.appendChild(e);
   }
   dayItems.forEach(it=> wrap.appendChild(renderItemRow(it)));
+  return wrap;
+}
+
+/* ---------------- GANTT CHART ---------------- */
+const GANTT_FILTER_DEFS = [
+  ['personal_event','personal','event','개인 일정','var(--personal)'],
+  ['work_todo','work','todo','회사 할일','var(--todo)'],
+  ['personal_todo','personal','todo','개인 할일','#fb7185'],
+];
+
+function ganttRange(){
+  if(ganttScale==='week'){
+    const start = weekStart(selectedDate);
+    return {start, end:addDays(start,6), unit:'day', count:7};
+  } else if(ganttScale==='year'){
+    const y = parseDate(selectedDate).getFullYear();
+    return {start:y+'-01-01', end:y+'-12-31', unit:'month', count:12};
+  } else {
+    const d = parseDate(selectedDate);
+    const y=d.getFullYear(), m=d.getMonth()+1;
+    const dim = daysInMonth(y,m);
+    return {start:y+'-'+pad(m)+'-01', end:y+'-'+pad(m)+'-'+pad(dim), unit:'day', count:dim};
+  }
+}
+
+function ganttPosition(range, itStartDate, itEndDate){
+  itEndDate = itEndDate || itStartDate;
+  if(range.unit==='day'){
+    const total = range.count;
+    let s = Math.round((parseDate(itStartDate) - parseDate(range.start))/86400000);
+    let e = Math.round((parseDate(itEndDate) - parseDate(range.start))/86400000);
+    if(e < 0 || s > total-1) return null;
+    s = Math.max(0, s); e = Math.min(total-1, e);
+    return {leftPct: s/total*100, widthPct: Math.max((e-s+1)/total*100, 100/total*0.7)};
+  } else {
+    const itYear = parseDate(itStartDate).getFullYear();
+    const rangeYear = parseDate(range.start).getFullYear();
+    if(itYear !== rangeYear) return null;
+    let s = parseDate(itStartDate).getMonth();
+    let e = parseDate(itEndDate).getMonth();
+    if(e<s) e = s;
+    return {leftPct: s/12*100, widthPct: (e-s+1)/12*100};
+  }
+}
+
+function buildGanttView(){
+  const wrap = document.createElement('div');
+
+  const filterWrap = document.createElement('div'); filterWrap.className='gantt-filters';
+  GANTT_FILTER_DEFS.forEach(([key,,,label,color])=>{
+    const chip = document.createElement('button');
+    const active = ganttFilters[key];
+    chip.className = 'gantt-filter-chip'+(active?' active':'');
+    chip.style.borderColor = color;
+    chip.style.background = active ? color : 'var(--card)';
+    chip.style.color = active ? '#fff' : color;
+    chip.textContent = label;
+    chip.onclick = ()=>{ ganttFilters[key] = !ganttFilters[key]; renderAll(); };
+    filterWrap.appendChild(chip);
+  });
+  wrap.appendChild(filterWrap);
+
+  const scaleSeg = document.createElement('div'); scaleSeg.className='seg'; scaleSeg.style.marginBottom='12px';
+  [['week','주별'],['month','월별'],['year','연도별']].forEach(([v,label])=>{
+    const b = document.createElement('button');
+    b.className = ganttScale===v ? 'active' : '';
+    b.textContent = label;
+    b.onclick = ()=>{ ganttScale=v; renderAll(); };
+    scaleSeg.appendChild(b);
+  });
+  wrap.appendChild(scaleSeg);
+
+  const range = ganttRange();
+  const chartOuter = document.createElement('div'); chartOuter.className='gantt-chart';
+  const inner = document.createElement('div'); inner.className='gantt-chart-inner';
+  if(range.unit==='day' && range.count>10) inner.style.minWidth = (range.count*22+100)+'px';
+
+  const headerRow = document.createElement('div'); headerRow.className='gantt-header-row';
+  const headerLabel = document.createElement('div'); headerLabel.className='gantt-row-label'; headerLabel.textContent='';
+  headerRow.appendChild(headerLabel);
+  const headerTrack = document.createElement('div'); headerTrack.className='gantt-track';
+  if(range.unit==='day'){
+    for(let i=0;i<range.count;i++){
+      const dStr = addDays(range.start, i);
+      const tick = document.createElement('div'); tick.className='gantt-tick'+(dStr===todayStr()?' today':'');
+      tick.style.left = (i/range.count*100)+'%'; tick.style.width=(100/range.count)+'%';
+      tick.textContent = range.count<=7 ? weekdayKr(dStr) : (i===0 || (i+1)%5===0 || i===range.count-1 ? (i+1) : '');
+      headerTrack.appendChild(tick);
+    }
+  } else {
+    for(let i=0;i<12;i++){
+      const tick = document.createElement('div'); tick.className='gantt-tick';
+      tick.style.left = (i/12*100)+'%'; tick.style.width=(100/12)+'%';
+      tick.textContent = (i+1)+'월';
+      headerTrack.appendChild(tick);
+    }
+  }
+  headerRow.appendChild(headerTrack);
+  inner.appendChild(headerRow);
+
+  let rowCount = 0;
+  GANTT_FILTER_DEFS.forEach(([key,cal,type,,color])=>{
+    if(!ganttFilters[key]) return;
+    let rowItems = items.filter(it=>it.calendar===cal && it.type===type);
+    rowItems = rowItems.sort((a,b)=> (a.startDate||'').localeCompare(b.startDate||''));
+    rowItems.forEach(it=>{
+      const pos = ganttPosition(range, it.startDate, it.endDate||it.startDate);
+      if(!pos) return;
+      rowCount++;
+      const row = document.createElement('div'); row.className='gantt-row';
+      const rl = document.createElement('div'); rl.className='gantt-row-label'; rl.textContent = it.title; rl.title = it.title;
+      row.appendChild(rl);
+      const track = document.createElement('div'); track.className='gantt-track';
+      const bar = document.createElement('div'); bar.className='gantt-bar'+(it.done?' done':'');
+      bar.style.left = pos.leftPct+'%';
+      bar.style.width = Math.max(pos.widthPct,3)+'%';
+      bar.style.background = color;
+      bar.textContent = it.title;
+      bar.onclick = ()=> openItemSheet(it.id);
+      track.appendChild(bar);
+      row.appendChild(track);
+      inner.appendChild(row);
+    });
+  });
+
+  chartOuter.appendChild(inner);
+  wrap.appendChild(chartOuter);
+
+  if(rowCount===0){
+    const e=document.createElement('div'); e.className='empty'; e.textContent='이 기간에 표시할 항목이 없어요.';
+    wrap.appendChild(e);
+  }
   return wrap;
 }
 
