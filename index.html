@@ -523,6 +523,19 @@ async function refreshFromServer(manual){
   syncStatus = 'syncing'; if(currentTab==='settings') renderSettings();
   try{
     const data = await apiList();
+    if(items.length > 0 && data.items.length < items.length){
+      if(!manual){
+        console.warn('서버 데이터가 로컬보다 적어 자동 동기화를 건너뜁니다. (기존 데이터 보호)');
+        syncStatus = 'idle'; if(currentTab==='settings') renderSettings();
+        return;
+      }
+      const proceed = confirm(
+        '지금 이 기기에는 '+items.length+'개 항목이 있는데, 서버에는 '+data.items.length+'개뿐이에요.\n'+
+        '이대로 진행하면 이 기기에만 있던 항목이 사라질 수 있어요.\n\n'+
+        '계속 진행할까요? (취소하면 아무 것도 바뀌지 않아요. "로컬 데이터를 서버로 올리기"를 먼저 해보세요)'
+      );
+      if(!proceed){ syncStatus='idle'; if(currentTab==='settings') renderSettings(); return; }
+    }
     items = data.items;
     recurringTemplates = data.recurring;
     saveAll(); persistRecurring();
@@ -534,6 +547,29 @@ async function refreshFromServer(manual){
     syncStatus = 'error'; syncErrorMsg = e.message;
     if(currentTab==='settings') renderSettings();
     if(manual) alert('동기화 중 오류가 발생했어요: '+e.message);
+  }
+}
+
+/** 연동을 처음 켠 직후, 연동 전부터 이 기기에 있던 로컬 항목들을 서버(구글시트)로 한 번에 올림 */
+async function uploadAllLocalToServer(){
+  if(!apiReady()){ alert('먼저 Apps Script 연동을 저장해주세요.'); return; }
+  if(!confirm('이 기기에 있는 로컬 항목을 전부 서버(구글시트)로 올릴까요?\n서버에 이미 같은 id가 있으면 그 항목은 덮어써요.')) return;
+  syncStatus = 'syncing'; renderSettings();
+  try{
+    for(const t of recurringTemplates){ await apiSaveRecurring(t); }
+    for(const it of items){
+      const saved = await apiSaveItem(it);
+      Object.assign(it, saved);
+    }
+    saveAll(); persistRecurring();
+    syncStatus = 'idle';
+    alert('업로드 완료! 구글시트에서 확인해보세요.');
+    renderSettings();
+  }catch(e){
+    console.error(e);
+    syncStatus = 'error'; syncErrorMsg = e.message;
+    alert('업로드 중 오류가 발생했어요: '+e.message);
+    renderSettings();
   }
 }
 
@@ -1510,7 +1546,11 @@ function renderSettings(){
     ${ready ? `
     <div class="sheet-actions" style="margin-top:8px;">
       <button class="btn-ghost" onclick="refreshFromServer(true)" style="width:100%;">지금 다시 동기화</button>
-    </div>` : ''}
+    </div>
+    <div class="sheet-actions" style="margin-top:8px;">
+      <button class="btn-ghost" onclick="uploadAllLocalToServer()" style="width:100%;">이 기기의 로컬 데이터를 서버로 올리기</button>
+    </div>
+    <div class="settings-note">연동을 처음 켜신 직후, 이전부터 이 기기에 있던 항목(회사/개인 할일 등)이 시트에 안 보이면 위 버튼을 한 번 눌러주세요.</div>` : ''}
 
     <div class="sheet-actions" style="margin-top:20px;">
       <button class="btn-primary" onclick="saveSettings()" style="width:100%;">저장</button>
@@ -1559,13 +1599,14 @@ function deletePersonCategory(id){
   renderPersonCatList();
 }
 function saveSettings(){
-  const wasReady = apiReady();
   settings.scriptUrl = document.getElementById('s-scripturl').value.trim();
   settings.scriptSecret = document.getElementById('s-scriptsecret').value.trim();
   saveSettingsToStorage();
   alert('저장했어요.');
-  if(apiReady() && !wasReady) refreshFromServer(true);
-  else renderSettings();
+  renderSettings();
+  // 주의: 여기서 자동으로 refreshFromServer()를 호출하지 않음.
+  // 서버가 아직 비어있는데 자동으로 당겨오면 이 기기에 있던 기존 데이터가 지워질 수 있어서,
+  // "지금 다시 동기화"(서버→로컬) / "로컬 데이터를 서버로 올리기"(로컬→서버) 중 사용자가 직접 선택하게 함.
 }
 
 /* ---------------- item add/edit sheet ---------------- */
