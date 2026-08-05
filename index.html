@@ -32,6 +32,7 @@
   }
   #topHeader .title-row{display:flex; align-items:center; justify-content:space-between;}
   #topHeader h1{font-size:18px; margin:0;}
+  #offlineBanner{background:#fff3cd; color:#7a5b00; font-size:12px; padding:8px 16px; text-align:center; cursor:pointer; border-bottom:1px solid #f0d98a;}
   #topHeader .header-icons{display:flex; gap:4px;}
   #topHeader .header-icon-btn{background:none; border:none; font-size:17px; cursor:pointer; padding:4px 6px; color:var(--sub);}
   #topHeader .nav-row{display:flex; align-items:center; justify-content:center; gap:18px; padding:8px 0 4px; font-size:15px; font-weight:600;}
@@ -84,6 +85,8 @@
   .hsec-caret{color:var(--sub); font-size:12px;}
   .hsec-body{padding:0 12px 10px; max-height:360px; overflow-y:auto;}
   .hsec-row{display:flex; align-items:flex-start; gap:8px; padding:8px 4px; border-bottom:1px dashed var(--border); cursor:pointer;}
+  .recurring-group-row{background:#fdf8ee; border-radius:8px; margin-bottom:4px; border-bottom:none;}
+  .recurring-group-row .hsec-caret{margin-left:auto; color:var(--sub); font-size:12px; padding-top:2px;}
   .hsec-row:last-of-type{border-bottom:none;}
   .hsec-cb{width:17px; height:17px; border-radius:50%; flex:0 0 17px; margin-top:1px; cursor:pointer; accent-color:var(--todo);}
   .hsec-date{flex:0 0 auto; font-size:12px; color:var(--sub); padding-top:2px; white-space:nowrap;}
@@ -224,6 +227,7 @@
 
 <div id="appShell">
 <header id="topHeader"></header>
+<div id="offlineBanner" hidden></div>
 <div class="chips" id="chips"></div>
 <div class="viewtabs" id="viewtabs" hidden></div>
 
@@ -441,6 +445,19 @@ function parseDate(s){ return new Date(s+'T00:00:00'); }
 function addDays(dateStr, n){ const d=parseDate(dateStr); d.setDate(d.getDate()+n); return toDateStr(d); }
 function weekdayKr(dateStr){ return ['일','월','화','수','목','금','토'][parseDate(dateStr).getDay()]; }
 
+/** 같은 제목으로 여러 날짜에 걸쳐 있는 개인 일정에서 "매달 며칠" 또는 "매주 무슨 요일" 패턴을 감지 */
+function detectRecurrencePattern(dateStrs){
+  if(dateStrs.length < 2) return null;
+  const days = dateStrs.map(d=>parseDate(d).getDate());
+  const weekdays = dateStrs.map(d=>parseDate(d).getDay());
+  const allSameDay = days.every(d=>d===days[0]);
+  const allSameWeekday = weekdays.every(w=>w===weekdays[0]);
+  if(allSameDay) return days[0]+'일';
+  if(allSameWeekday) return ['일','월','화','수','목','금','토'][weekdays[0]]+'요일';
+  return null;
+}
+let expandedRecurringEventGroups = {};
+
 function matchesFilter(it){
   if(currentFilter==='all') return true;
   return it.calendar===currentFilter;
@@ -459,6 +476,18 @@ function sortByTime(list){
 
 /* ---------------- Apps Script 백엔드 API 클라이언트 ---------------- */
 function apiReady(){ return !!(settings.scriptUrl && settings.scriptSecret); }
+
+function updateOfflineBanner(){
+  const banner = document.getElementById('offlineBanner');
+  if(apiReady()){
+    banner.hidden = true;
+    return;
+  }
+  banner.hidden = false;
+  banner.textContent = '⚠️ 이 기기는 서버(구글시트) 연동이 안 되어 있어요. 저장한 내용이 다른 기기에는 보이지 않아요. 눌러서 설정하기 →';
+  banner.onclick = ()=>{ currentTab='settings'; renderAll(); };
+}
+function showOfflineBanner(){ updateOfflineBanner(); }
 
 async function apiList(){
   const url = settings.scriptUrl + '?action=list&secret=' + encodeURIComponent(settings.scriptSecret);
@@ -843,14 +872,6 @@ function buildDoneToggle(key, doneList, body, labelFn){
 function buildHomeTodoSection(cal, title, icon, accentColor, tintColor){
   let list = items.filter(it=>it.calendar===cal && it.type==='todo' && !it.done);
   list = list.sort((a,b)=> ((b.important?1:0)-(a.important?1:0)) || (a.startDate||'9999').localeCompare(b.startDate||'9999'));
-  // 같은 정기 업무(recurringId)는 매달치를 다 나열하지 않고, 가장 가까운(중요한) 하나만 [정기] 배지로 대표 표시
-  const seenRecurring = new Set();
-  list = list.filter(it=>{
-    if(!it.recurringId) return true;
-    if(seenRecurring.has(it.recurringId)) return false;
-    seenRecurring.add(it.recurringId);
-    return true;
-  });
   const doneList = items.filter(it=>it.calendar===cal && it.type==='todo' && it.done)
     .sort((a,b)=> (b.startDate||'').localeCompare(a.startDate||''));
 
@@ -881,9 +902,25 @@ function buildHomeEventSection(){
   let list = items.filter(it=>it.calendar==='personal' && it.type==='event' && !it.done);
   list = list.filter(it=> (it.endDate||it.startDate) >= todayStr());
   list = list.sort((a,b)=> (a.startDate+ (a.startTime||'00:00')).localeCompare(b.startDate+(b.startTime||'00:00')));
-  list = list.slice(0,15);
   const doneList = items.filter(it=>it.calendar==='personal' && it.type==='event' && it.done)
     .sort((a,b)=> (b.startDate||'').localeCompare(a.startDate||''));
+
+  // 같은 제목으로 2번 이상 나오는 일정 = 반복 패턴이 있는 일정으로 보고 맨 위에 그룹으로 모음
+  const byTitle = {};
+  list.forEach(it=>{ const key=(it.title||'').trim(); (byTitle[key] = byTitle[key] || []).push(it); });
+  const recurringGroups = [];
+  const singleList = [];
+  list.forEach(it=>{
+    const key = (it.title||'').trim();
+    const group = byTitle[key];
+    if(group.length >= 2){
+      if(!recurringGroups.some(g=>g.title===key)){
+        recurringGroups.push({title: key, items: group, pattern: detectRecurrencePattern(group.map(x=>x.startDate))});
+      }
+    } else {
+      singleList.push(it);
+    }
+  });
 
   const box = document.createElement('div'); box.className='hsec';
   box.style.background = '#eefaf3';
@@ -897,8 +934,30 @@ function buildHomeEventSection(){
       const e = document.createElement('div'); e.className='empty-mini'; e.textContent='다가오는 일정이 없어요.';
       body.appendChild(e);
     }
+
+    recurringGroups.forEach(group=>{
+      const gKey = 'evt_'+group.title;
+      const isOpen = !!expandedRecurringEventGroups[gKey];
+      const header = document.createElement('div'); header.className='hsec-row recurring-group-row';
+      const badge = document.createElement('span'); badge.className='recurring-badge'; badge.textContent='정기';
+      header.appendChild(badge);
+      const label = document.createElement('span'); label.className='hsec-date bold';
+      label.textContent = group.pattern || compactDateLabel(group.items[0].startDate);
+      header.appendChild(label);
+      const main = document.createElement('div'); main.className='hsec-main';
+      main.textContent = group.title + ' (' + group.items.length + '건)';
+      header.appendChild(main);
+      const caret = document.createElement('span'); caret.className='hsec-caret'; caret.textContent = isOpen?'▾':'▸';
+      header.appendChild(caret);
+      header.onclick = ()=>{ expandedRecurringEventGroups[gKey] = !expandedRecurringEventGroups[gKey]; renderAll(); };
+      body.appendChild(header);
+      if(isOpen){
+        group.items.forEach(it=> body.appendChild(buildHomeRow(it, {leftLabel: compactDateLabel(it.startDate)+' '+(it.startTime||'종일')})));
+      }
+    });
+
     let lastDate = null;
-    list.forEach(it=>{
+    singleList.forEach(it=>{
       if(it.startDate !== lastDate){
         const dg = document.createElement('div'); dg.className='hsec-date-group'; dg.textContent = compactDateLabel(it.startDate);
         body.appendChild(dg);
@@ -1410,7 +1469,7 @@ function updateRUnitSegUI(){
     : '예: 1 + 개월 = 매월, 3 + 개월 = 3개월마다 한 번씩.';
 }
 
-function saveRecurringItem(){
+async function saveRecurringItem(){
   const title = document.getElementById('r-title').value.trim();
   const day = parseInt(document.getElementById('r-day').value, 10);
   const month = r_unit==='year' ? parseInt(document.getElementById('r-month').value, 10) : null;
@@ -1438,7 +1497,20 @@ function saveRecurringItem(){
   ensureRecurringInstances();
   closeRecurringSheet();
   renderAll();
-  syncRecurringRemote(savedTemplate);
+
+  // 서버 동기화 상태를 애매하게 두지 않고 셋 중 하나로 확실히 알려줌: 연동 안 됨 / 성공 / 실패
+  if(!apiReady()){
+    alert('⚠️ 이 기기는 아직 Apps Script 연동이 안 되어 있어요.\n"'+title+'"은 이 기기에만 저장됐고, 다른 기기/구글시트에는 반영되지 않아요.\n설정 화면에서 Apps Script URL과 비밀키를 입력해주세요.');
+    return;
+  }
+  try{
+    const saved = await apiSaveRecurring(savedTemplate);
+    Object.assign(savedTemplate, saved);
+    persistRecurring();
+  }catch(e){
+    console.error('정기 할일 저장 동기화 실패', e);
+    alert('⚠️ 정기 할일 "'+title+'"이 서버(구글시트)에 저장되지 않았어요.\n오류: '+e.message);
+  }
 }
 function deleteCurrentRecurring(){
   if(!editingRecurringId) return;
@@ -1627,6 +1699,7 @@ function saveSettings(){
   saveSettingsToStorage();
   alert('저장했어요.');
   renderSettings();
+  updateOfflineBanner();
   // 주의: 여기서 자동으로 refreshFromServer()를 호출하지 않음.
   // 서버가 아직 비어있는데 자동으로 당겨오면 이 기기에 있던 기존 데이터가 지워질 수 있어서,
   // "지금 다시 동기화"(서버→로컬) / "로컬 데이터를 서버로 올리기"(로컬→서버) 중 사용자가 직접 선택하게 함.
@@ -1718,6 +1791,7 @@ function saveItem(){
   closeItemSheet();
   renderAll();
   syncItemRemote(savedItem);
+  if(!apiReady()) showOfflineBanner();
 }
 function deleteCurrentItem(){
   if(!editingId) return;
@@ -1767,6 +1841,7 @@ function renderAll(){
   renderHeader();
   renderChips();
   renderViewTabs();
+  updateOfflineBanner();
 
   document.getElementById('screenHome').hidden = currentTab!=='home';
   document.getElementById('screenSchedule').hidden = currentTab!=='schedule';
