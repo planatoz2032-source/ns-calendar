@@ -135,6 +135,29 @@
   .item .edit{border:none; background:var(--bg); border-radius:8px; width:28px; height:28px; font-size:13px; cursor:pointer;}
   .empty{text-align:center; color:var(--sub); font-size:13px; padding:30px 0;}
 
+  /* news tab */
+  .news-cat-row{display:flex; gap:6px; padding:10px 0 12px; overflow-x:auto;}
+  .news-cat-chip{flex:0 0 auto; padding:6px 12px; border-radius:999px; border:1px solid var(--border); background:var(--card); font-size:12.5px; font-weight:600; cursor:pointer; color:var(--sub); white-space:nowrap;}
+  .news-cat-chip.active{background:var(--text); color:#fff; border-color:var(--text);}
+  .news-refresh-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .news-refresh-row .news-updated{font-size:11.5px; color:var(--sub);}
+  .news-refresh-row button{background:none; border:1px solid var(--border); border-radius:999px; padding:5px 10px; font-size:11.5px; color:var(--sub); cursor:pointer;}
+  .news-card{display:block; background:var(--card); border-radius:14px; padding:12px 14px; margin-bottom:8px; border:1px solid var(--border); text-decoration:none; color:inherit;}
+  .news-card:active{background:#f8f9fb;}
+  .news-meta-row{display:flex; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;}
+  .news-badge{font-size:10.5px; padding:2px 7px; border-radius:6px; font-weight:700;}
+  .news-badge.dev{background:#e8f0fe; color:var(--work);}
+  .news-badge.plan{background:#e3faf1; color:var(--personal);}
+  .news-badge.tax{background:#fef3e2; color:var(--todo);}
+  .news-badge.etc{background:#f1f2f5; color:var(--sub);}
+  .news-source{font-size:11.5px; color:var(--sub);}
+  .news-time{font-size:11.5px; color:var(--sub);}
+  .news-title{font-size:14.5px; font-weight:600; line-height:1.4; margin-bottom:3px; word-break:break-word;}
+  .news-desc{font-size:12.5px; color:var(--sub); line-height:1.5; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;}
+  .news-source-error{font-size:11.5px; color:var(--sub); padding:6px 2px;}
+  .news-star{position:absolute; top:10px; right:10px; background:none; border:none; font-size:18px; line-height:1; color:#d0d3da; cursor:pointer; padding:2px;}
+  .news-star.on{color:#f5b400;}
+
   /* day timeline */
   .allday-chip{display:inline-block; font-size:12px; padding:5px 9px; border-radius:8px; margin:2px 4px 2px 0;}
   .allday-chip.work{background:#e8f0fe; color:var(--work);}
@@ -241,6 +264,7 @@
 <main class="screen" id="screenFavorites" hidden></main>
 <main class="screen" id="screenSettings" hidden></main>
 <main class="screen" id="screenRecurring" hidden></main>
+<main class="screen" id="screenNews" hidden></main>
 <button id="fabAdd" title="새 항목 추가">+</button>
 </div>
 
@@ -250,6 +274,7 @@
   <button data-tab="todo"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5l1.5 1.5l2.5 -2.5"/><path d="M3.5 11.5l1.5 1.5l2.5 -2.5"/><path d="M3.5 17.5l1.5 1.5l2.5 -2.5"/><path d="M11 6l9 0"/><path d="M11 12l9 0"/><path d="M11 18l9 0"/></svg></span><span>할일</span></button>
   <button data-tab="favorites"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1.002l3.086 -6.253l3.086 6.253l6.9 1.002l-5 4.867l1.179 6.873z"/></svg></span><span>즐겨찾기</span></button>
   <button data-tab="settings"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg></span><span>설정</span></button>
+  <button data-tab="news"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a2 2 0 0 1 2 2v13a2.5 2.5 0 0 1 -2.5 2.5h-11.5a2 2 0 0 1 -2 -2v-13a2 2 0 0 1 2 -2z"/><path d="M18 8h2a1 1 0 0 1 1 1v10a1.5 1.5 0 0 1 -3 0"/><path d="M8 8h5"/><path d="M8 12h5"/><path d="M8 16h3"/></svg></span><span>부동산뉴스</span></button>
 </nav>
 
 <!-- Add/Edit sheet -->
@@ -676,7 +701,7 @@ function renderHeader(){
         <h1><button class="back-btn" onclick="currentTab='settings'; renderAll();">‹</button>🔁 정기 할일 관리</h1>
       </div>`;
   } else {
-    const titles = {home:'📅 NS Planner', todo:'☑️ 할일', favorites:'⭐ 즐겨찾기', settings:'⚙️ 설정'};
+    const titles = {home:'📅 NS Planner', todo:'☑️ 할일', favorites:'⭐ 즐겨찾기', settings:'⚙️ 설정', news:'🏠 부동산 뉴스'};
     const icons = currentTab==='home'
       ? `<span class="header-icons">
            <button class="header-icon-btn" onclick="openSearch()" title="검색">🔍</button>
@@ -1893,6 +1918,178 @@ function renderFavorites(){
   el.appendChild(box);
 }
 
+/* ---------------- 부동산 뉴스 탭 ---------------- */
+const NEWS_SOURCES = [
+  { name:'한국경제 부동산', rss:'https://www.hankyung.com/feed/realestate' },
+  { name:'한국경제 경제', rss:'https://www.hankyung.com/feed/economy' },
+  { name:'아시아경제 부동산', rss:'https://view.asiae.co.kr/rss/realestate.htm' },
+  { name:'연합뉴스 경제', rss:'https://www.yna.co.kr/rss/economy.xml' },
+  { name:'연합뉴스 오피니언', rss:'https://www.yna.co.kr/rss/opinion.xml' },
+  { name:'내손안의 서울(주택)', rss:'https://mediahub.seoul.go.kr/news/rss/03' },
+  { name:'내손안의 서울(경제)', rss:'https://mediahub.seoul.go.kr/news/rss/04' },
+  { name:'내손안의 서울(교통)', rss:'https://mediahub.seoul.go.kr/news/rss/01' },
+];
+// RSS로 못 가져오는 곳은 바로가기 링크로만 제공
+const NEWS_LINKS = [
+  { name:'네이버 뉴스(부동산)', url:'https://land.naver.com/news' },
+  { name:'하우징헤럴드', url:'https://www.housingherald.co.kr' },
+  { name:'한국주택경제신문', url:'https://www.arunews.com' },
+  { name:'뉴스1', url:'https://www.news1.kr' },
+];
+const NEWS_CAT_KEYWORDS = {
+  tax:['세금','종부세','양도세','취득세','보유세','증여세','상속세','과세','공시가'],
+  plan:['도시계획','지구단위','정비구역','용도지역','기본계획','도시재생','지구지정','토지이용'],
+  dev:['재건축','재개발','분양','착공','준공','리모델링','정비사업','공급','시공사','조합'],
+};
+const NEWS_BOOKMARK_KEY = 'ns_news_bookmarks_v1';
+let newsQuery = '';
+let newsShowBookmarksOnly = false;
+let newsState = { loading:false, items:[], sourceErrors:[], lastFetched:null };
+let newsBookmarks = JSON.parse(localStorage.getItem(NEWS_BOOKMARK_KEY) || '{}');
+function saveNewsBookmarks(){ localStorage.setItem(NEWS_BOOKMARK_KEY, JSON.stringify(newsBookmarks)); }
+function toggleNewsBookmark(link){
+  if(newsBookmarks[link]) delete newsBookmarks[link];
+  else {
+    const it = newsState.items.find(x=>x.link===link) || Object.values(newsBookmarks).find(x=>x.link===link);
+    if(it) newsBookmarks[link] = it;
+  }
+  saveNewsBookmarks();
+  renderNews();
+}
+
+function categorizeNews(text){
+  for(const cat of ['tax','plan','dev']){
+    if(NEWS_CAT_KEYWORDS[cat].some(k=>text.includes(k))) return cat;
+  }
+  return 'etc';
+}
+function newsTimeAgo(dateStr){
+  const d = new Date(dateStr);
+  if(isNaN(d.getTime())) return '';
+  const diffMin = Math.floor((Date.now()-d.getTime())/60000);
+  if(diffMin < 1) return '방금 전';
+  if(diffMin < 60) return diffMin+'분 전';
+  const diffH = Math.floor(diffMin/60);
+  if(diffH < 24) return diffH+'시간 전';
+  return Math.floor(diffH/24)+'일 전';
+}
+async function fetchAllNews(){
+  newsState.loading = true;
+  newsState.sourceErrors = [];
+  const results = await Promise.allSettled(NEWS_SOURCES.map(src =>
+    fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(src.rss))
+      .then(r=>r.json())
+      .then(data=>{
+        if(data.status!=='ok') throw new Error('bad feed');
+        return (data.items||[]).map(it=>({
+          source:src.name, title:it.title, link:it.link,
+          desc:(it.description||'').replace(/<[^>]+>/g,'').slice(0,120),
+          pubDate:it.pubDate, cat:categorizeNews(it.title+' '+(it.description||''))
+        }));
+      })
+  ));
+  let items = [];
+  results.forEach((res, i)=>{
+    if(res.status==='fulfilled') items = items.concat(res.value);
+    else newsState.sourceErrors.push(NEWS_SOURCES[i].name);
+  });
+  items.sort((a,b)=> new Date(b.pubDate) - new Date(a.pubDate));
+  newsState.items = items;
+  newsState.loading = false;
+  newsState.lastFetched = new Date();
+}
+function newsCardHtml(it, catLabel, catClass){
+  const bookmarked = !!newsBookmarks[it.link];
+  return `
+    <div class="news-card" style="position:relative;">
+      <button class="news-star ${bookmarked?'on':''}" data-link="${it.link.replace(/"/g,'&quot;')}" title="${bookmarked?'즐겨찾기 해제':'즐겨찾기'}">${bookmarked?'★':'☆'}</button>
+      <a href="${it.link}" target="_blank" rel="noopener" style="text-decoration:none; color:inherit; display:block; padding-right:26px;">
+        <div class="news-meta-row">
+          <span class="news-badge ${catClass[it.cat]}">${catLabel[it.cat]}</span>
+          <span class="news-source">${it.source}</span>
+          <span class="news-time">· ${newsTimeAgo(it.pubDate)}</span>
+        </div>
+        <div class="news-title">${it.title}</div>
+        <div class="news-desc">${it.desc}</div>
+      </a>
+    </div>`;
+}
+function newsMatchesQuery(it, q){
+  if(!q) return true;
+  const hay = (it.title+' '+it.desc+' '+it.source).toLowerCase();
+  return hay.includes(q.toLowerCase());
+}
+function renderNews(){
+  const el = document.getElementById('screenNews');
+
+  const searchRow = `<div class="news-refresh-row" style="margin-bottom:10px;">
+    <input id="newsSearchInput" type="text" placeholder="제목, 내용, 언론사로 검색" value="${(newsQuery||'').replace(/"/g,'&quot;')}" style="flex:1; padding:8px 12px; border-radius:10px; border:1px solid var(--border); font-size:13.5px; background:#fafafa;">
+  </div>`;
+
+  const refreshRow = `<div class="news-refresh-row">
+    <span class="news-updated">${newsState.lastFetched ? '마지막 확인: '+newsTimeAgo(newsState.lastFetched) : ''}</span>
+    <div style="display:flex; gap:6px;">
+      <button onclick="newsShowBookmarksOnly=!newsShowBookmarksOnly; renderNews();" style="${newsShowBookmarksOnly?'background:var(--text); color:#fff; border-color:var(--text);':''}">★ 즐겨찾기</button>
+      <button onclick="fetchAllNews().then(renderNews)">새로고침</button>
+    </div>
+  </div>`;
+
+  const linkRow = `<div class="news-cat-row" style="padding-top:0;">${NEWS_LINKS.map(l=>
+    `<a href="${l.url}" target="_blank" rel="noopener" class="news-cat-chip" style="text-decoration:none; display:inline-block;">${l.name} ↗</a>`
+  ).join('')}</div>`;
+
+  el.innerHTML = searchRow + refreshRow + linkRow + `<div id="newsListBody"></div>`;
+  document.getElementById('newsSearchInput').addEventListener('input', e=>{
+    newsQuery = e.target.value;
+    renderNewsListBody();
+  });
+
+  if(newsState.loading && !newsShowBookmarksOnly){
+    document.getElementById('newsListBody').innerHTML = `<div class="empty">최신 기사를 불러오는 중...</div>`;
+    return;
+  }
+  if(newsState.items.length===0 && newsState.lastFetched===null && !newsShowBookmarksOnly){
+    document.getElementById('newsListBody').innerHTML = `<div class="empty">불러오기를 시작합니다...</div>`;
+    fetchAllNews().then(renderNews);
+    return;
+  }
+  renderNewsListBody();
+}
+function renderNewsListBody(){
+  const bodyEl = document.getElementById('newsListBody');
+  if(!bodyEl) return;
+  const catLabel = {dev:'개발', plan:'도시계획', tax:'세금', etc:'기타'};
+  const catClass = {dev:'dev', plan:'plan', tax:'tax', etc:'etc'};
+
+  let list;
+  if(newsShowBookmarksOnly){
+    list = Object.values(newsBookmarks).filter(it=>newsMatchesQuery(it, newsQuery));
+    list.sort((a,b)=> new Date(b.pubDate) - new Date(a.pubDate));
+    if(list.length===0){
+      bodyEl.innerHTML = `<div class="empty">즐겨찾기에 담은 기사가 없어요. 기사 카드의 ☆를 눌러 담아두세요.</div>`;
+      return;
+    }
+  } else {
+    list = newsState.items.filter(it=>newsMatchesQuery(it, newsQuery));
+    if(list.length===0){
+      bodyEl.innerHTML = `<div class="empty">검색 결과가 없어요.</div>`;
+      return;
+    }
+  }
+
+  let errNote = '';
+  if(!newsShowBookmarksOnly && newsState.sourceErrors.length){
+    errNote = `<div class="news-source-error">불러오지 못한 소스: ${newsState.sourceErrors.join(', ')}</div>`;
+  }
+  bodyEl.innerHTML = list.map(it=>newsCardHtml(it, catLabel, catClass)).join('') + errNote;
+}
+document.getElementById('screenNews').addEventListener('click', e=>{
+  const btn = e.target.closest('.news-star');
+  if(!btn) return;
+  e.preventDefault(); e.stopPropagation();
+  toggleNewsBookmark(btn.dataset.link);
+});
+
 /* ---------------- master render ---------------- */
 function renderAll(){
   renderHeader();
@@ -1906,7 +2103,8 @@ function renderAll(){
   document.getElementById('screenFavorites').hidden = currentTab!=='favorites';
   document.getElementById('screenSettings').hidden = currentTab!=='settings';
   document.getElementById('screenRecurring').hidden = currentTab!=='recurring';
-  document.getElementById('chips').hidden = (currentTab==='settings' || currentTab==='recurring' || currentTab==='favorites');
+  document.getElementById('screenNews').hidden = currentTab!=='news';
+  document.getElementById('chips').hidden = (currentTab==='settings' || currentTab==='recurring' || currentTab==='favorites' || currentTab==='news');
 
   if(currentTab==='home') renderHome();
   else if(currentTab==='schedule') renderSchedule();
@@ -1914,6 +2112,7 @@ function renderAll(){
   else if(currentTab==='favorites') renderFavorites();
   else if(currentTab==='settings') renderSettings();
   else if(currentTab==='recurring') renderRecurringPage();
+  else if(currentTab==='news') renderNews();
 
   const navTab = currentTab==='recurring' ? 'settings' : currentTab;
   [...document.getElementById('bottomNav').children].forEach(b=>{
