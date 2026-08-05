@@ -87,6 +87,8 @@
   .hsec-row{display:flex; align-items:flex-start; gap:8px; padding:8px 4px; border-bottom:1px dashed var(--border); cursor:pointer;}
   .recurring-group-row{background:#fdf8ee; border-radius:6px; margin:2px 0; border-bottom:1px dashed var(--border); padding:8px 4px;}
   .recurring-group-row .hsec-caret{margin-left:auto; color:var(--sub); font-size:12px; padding-top:2px;}
+  .recurring-section-body{background:#fffaf0; border:1px solid #f3e2ba; border-radius:8px; padding:6px 6px 2px; margin:2px 0 8px;}
+  .recurring-section-body .hsec-date-group{color:#b6650a;}
   .hsec-row:last-of-type{border-bottom:none;}
   .hsec-cb{width:17px; height:17px; border-radius:50%; flex:0 0 17px; margin-top:1px; cursor:pointer; accent-color:var(--todo);}
   .hsec-date{flex:0 0 auto; font-size:12px; color:var(--sub); padding-top:2px; white-space:nowrap;}
@@ -974,34 +976,34 @@ function buildHomeEventSection(){
       body.appendChild(e);
     }
 
-    recurringGroups.forEach(group=>{
-      // 아직 알고 있는 회차가 1개뿐이면 굳이 접었다 펼 필요 없이 바로 한 줄로 표시
-      if(group.items.length === 1){
-        const it = group.items[0];
-        body.appendChild(buildHomeRow(it, {leftLabel: compactDateLabel(it.startDate)+' '+(it.startTime||'종일'), forceRecurringBadge:true}));
-        return;
+    // 정기 일정 전체를 하나의 접이식 섹션으로 묶어서, 일반 일정과 명확히 분리
+    if(recurringGroups.length>0){
+      const rKey = 'personal_event_recurring_all';
+      const rOpen = !!expandedRecurringEventGroups[rKey];
+      const rHeader = document.createElement('div'); rHeader.className='hsec-row recurring-group-row';
+      const rBadge = document.createElement('span'); rBadge.className='recurring-badge'; rBadge.textContent='정기';
+      rHeader.appendChild(rBadge);
+      const rMain = document.createElement('div'); rMain.className='hsec-main';
+      const rLine = document.createElement('div'); rLine.className='hsec-line';
+      rLine.textContent = '정기일정 ('+recurringGroups.length+')';
+      rMain.appendChild(rLine);
+      rHeader.appendChild(rMain);
+      const rCaret = document.createElement('span'); rCaret.className='hsec-caret'; rCaret.textContent = rOpen?'▾':'▸';
+      rHeader.appendChild(rCaret);
+      rHeader.onclick = ()=>{ expandedRecurringEventGroups[rKey] = !expandedRecurringEventGroups[rKey]; renderAll(); };
+      body.appendChild(rHeader);
+
+      if(rOpen){
+        const rBody = document.createElement('div'); rBody.className='recurring-section-body';
+        recurringGroups.forEach(group=>{
+          const gLabel = document.createElement('div'); gLabel.className='hsec-date-group';
+          gLabel.textContent = (group.pattern ? group.pattern+' · ' : '') + group.title + ' (' + group.items.length + '회차)';
+          rBody.appendChild(gLabel);
+          group.items.forEach(it=> rBody.appendChild(buildHomeRow(it, {leftLabel: compactDateLabel(it.startDate)+' '+(it.startTime||'종일'), forceRecurringBadge:true})));
+        });
+        body.appendChild(rBody);
       }
-      const gKey = 'evt_'+group.title;
-      const isOpen = !!expandedRecurringEventGroups[gKey];
-      const header = document.createElement('div'); header.className='hsec-row recurring-group-row';
-      const badge = document.createElement('span'); badge.className='recurring-badge'; badge.textContent='정기';
-      header.appendChild(badge);
-      const label = document.createElement('span'); label.className='hsec-date bold';
-      label.textContent = group.pattern || compactDateLabel(group.items[0].startDate);
-      header.appendChild(label);
-      const main = document.createElement('div'); main.className='hsec-main';
-      const mainLine = document.createElement('div'); mainLine.className='hsec-line';
-      mainLine.textContent = group.title + ' (' + group.items.length + '건)';
-      main.appendChild(mainLine);
-      header.appendChild(main);
-      const caret = document.createElement('span'); caret.className='hsec-caret'; caret.textContent = isOpen?'▾':'▸';
-      header.appendChild(caret);
-      header.onclick = ()=>{ expandedRecurringEventGroups[gKey] = !expandedRecurringEventGroups[gKey]; renderAll(); };
-      body.appendChild(header);
-      if(isOpen){
-        group.items.forEach(it=> body.appendChild(buildHomeRow(it, {leftLabel: compactDateLabel(it.startDate)+' '+(it.startTime||'종일')})));
-      }
-    });
+    }
 
     let lastDate = null;
     singleList.forEach(it=>{
