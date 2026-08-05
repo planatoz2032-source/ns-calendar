@@ -91,7 +91,7 @@
   .recurring-section-body .hsec-date-group{color:#b6650a;}
   .hsec-row:last-of-type{border-bottom:none;}
   .hsec-cb{width:17px; height:17px; border-radius:50%; flex:0 0 17px; margin-top:1px; cursor:pointer; accent-color:var(--todo);}
-  .hsec-date{flex:0 0 auto; font-size:12px; color:var(--sub); padding-top:2px; white-space:nowrap;}
+  .hsec-date{flex:0 0 auto; min-width:56px; font-size:12px; color:var(--sub); padding-top:2px; white-space:nowrap;}
   .hsec-date.bold{font-weight:700; color:var(--text);}
   .hsec-date-group{font-size:13px; font-weight:700; color:var(--text); margin:10px 2px 4px;}
   .hsec-date-group:first-child{margin-top:2px;}
@@ -181,7 +181,9 @@
     gap:2px; font-size:10.5px; color:var(--sub); cursor:pointer;
   }
   #bottomNav button.active{color:var(--work); font-weight:700;}
-  #bottomNav .navicon{font-size:19px;}
+  #bottomNav .navicon{display:flex; align-items:center; justify-content:center; width:34px; height:34px; border-radius:50%; margin:0 auto 2px; transition:background 0.15s;}
+  #bottomNav .navicon svg{width:21px; height:21px;}
+  #bottomNav button.active .navicon{background:#e6f1fb;}
 
   #fabAdd{
     position:absolute; bottom:88px; right:18px;
@@ -243,11 +245,11 @@
 </div>
 
 <nav id="bottomNav">
-  <button data-tab="home"><span class="navicon">🏠</span><span>홈</span></button>
-  <button data-tab="schedule"><span class="navicon">📅</span><span>일정</span></button>
-  <button data-tab="todo"><span class="navicon">☑️</span><span>할일</span></button>
-  <button data-tab="favorites"><span class="navicon">⭐</span><span>즐겨찾기</span></button>
-  <button data-tab="settings"><span class="navicon">👤</span><span>설정</span></button>
+  <button data-tab="home"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></span><span>홈</span></button>
+  <button data-tab="schedule"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 11h16"/></svg></span><span>일정</span></button>
+  <button data-tab="todo"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5l1.5 1.5l2.5 -2.5"/><path d="M3.5 11.5l1.5 1.5l2.5 -2.5"/><path d="M3.5 17.5l1.5 1.5l2.5 -2.5"/><path d="M11 6l9 0"/><path d="M11 12l9 0"/><path d="M11 18l9 0"/></svg></span><span>할일</span></button>
+  <button data-tab="favorites"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1.002l3.086 -6.253l3.086 6.253l6.9 1.002l-5 4.867l1.179 6.873z"/></svg></span><span>즐겨찾기</span></button>
+  <button data-tab="settings"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg></span><span>설정</span></button>
 </nav>
 
 <!-- Add/Edit sheet -->
@@ -684,13 +686,19 @@ function renderHeader(){
     h.innerHTML = `<div class="title-row"><h1>${titles[currentTab]||'📅 NS Planner'}</h1>${icons}</div>`;
   }
 }
+function isValidDateStr(s){
+  if(!s) return false;
+  const d = parseDate(s);
+  return !isNaN(d.getTime());
+}
 function fmtFullDate(dateStr){
+  if(!isValidDateStr(dateStr)) return '날짜 미정';
   const d = parseDate(dateStr);
   return `${d.getMonth()+1}월 ${d.getDate()}일 (${weekdayKr(dateStr)})`;
 }
 // 개인 일정/할일 전용: "8월6일(목) 14:30" 또는 "8월6일(목) 종일" 형식 (일-요일 사이 공백 없음)
 function personalDateTimeLabel(it){
-  if(!it.startDate) return '';
+  if(!isValidDateStr(it.startDate)) return '날짜 미정';
   const d = parseDate(it.startDate);
   const datePart = `${d.getMonth()+1}월${d.getDate()}일(${weekdayKr(it.startDate)})`;
   const timePart = it.startTime ? it.startTime : '종일';
@@ -703,7 +711,7 @@ function personLabel(personId){
 }
 // 홈 화면 박스용 축약 날짜 포맷: "08.05(수)"
 function compactDateLabel(dateStr){
-  if(!dateStr) return '';
+  if(!isValidDateStr(dateStr)) return '날짜 미정';
   const d = parseDate(dateStr);
   return pad(d.getMonth()+1)+'.'+pad(d.getDate())+'('+weekdayKr(dateStr)+')';
 }
