@@ -4,7 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>NS Planner</title>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     color-scheme: light;
@@ -120,7 +119,7 @@
   .tag.work{background:#e8f0fe; color:var(--work);}
   .tag.personal{background:#e3faf1; color:var(--personal);}
   .tag.todo{background:#fef3e2; color:var(--todo);}
-  .gcal-btn{font-size:10.5px; padding:3px 7px; border-radius:7px; border:1px solid var(--border); background:#fff; color:var(--text); text-decoration:none;}
+
   .person-tag{font-size:10.5px; padding:2px 7px; border-radius:6px; font-weight:700; background:#f1eafd; color:#7c3aed; flex:0 0 auto; align-self:flex-start; white-space:nowrap;}
   .tag.recurring{background:#fdf1e2; color:#b6650a;}
   .recurring-box{border:1px solid #f3d9ad; background:#fffaf0; border-radius:14px; padding:2px 10px 6px; margin-bottom:16px;}
@@ -416,9 +415,6 @@ if(items === null){
   if(items.length !== beforeLen) localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
-if(!settings.work) settings.work = 'ns.cho@thebuilders.co.kr';
-if(!settings.personal) settings.personal = 'planatoz2032@gmail.com';
-if(!settings.clientId) settings.clientId = '860343908563-bktcmuc715dq7g18t0frmkraersltbgg.apps.googleusercontent.com';
 if(settings.homeCollapsed === undefined) settings.homeCollapsed = true;
 if(!settings.homeSections) settings.homeSections = {work_todo:true, personal_event:true, personal_todo:true};
 if(!settings.personalCategories) settings.personalCategories = [
@@ -465,168 +461,80 @@ function sortByTime(list){
   return list.slice().sort((a,b)=> (a.startTime||'00:00').localeCompare(b.startTime||'00:00'));
 }
 
-function gcalUrl(it){
-  const text = encodeURIComponent(it.title);
-  let dates;
-  if(!it.startTime){
-    const start = it.startDate.replace(/-/g,'');
-    const end = addDays(it.endDate || it.startDate, 1).replace(/-/g,'');
-    dates = start+'/'+end;
-  } else {
-    const sD = it.startDate, sT = it.startTime;
-    const eD = it.endDate || it.startDate;
-    const eT = it.endTime || it.startTime;
-    const start = new Date(`${sD}T${sT}:00+09:00`);
-    let end = new Date(`${eD}T${eT}:00+09:00`);
-    if(end <= start) end = new Date(start.getTime()+60*60*1000);
-    const fmt = d => d.toISOString().replace(/[-:]/g,'').split('.')[0]+'Z';
-    dates = fmt(start)+'/'+fmt(end);
-  }
-  const details = encodeURIComponent(it.memo||'');
-  let url = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${text}&dates=${dates}&details=${details}&ctz=Asia%2FSeoul`;
-  const email = it.calendar==='work' ? settings.work : settings.personal;
-  if(email) url += `&authuser=${encodeURIComponent(email)}`;
-  return url;
-}
+/* ---------------- Apps Script 백엔드 API 클라이언트 ---------------- */
+function apiReady(){ return !!(settings.scriptUrl && settings.scriptSecret); }
 
-/* ---------------- Google Calendar 양방향 연동 (개인 계정) ---------------- */
-let gAccessToken = null;
-let gTokenExpiry = 0;
-let gTokenClient = null;
+async function apiList(){
+  const url = settings.scriptUrl + '?action=list&secret=' + encodeURIComponent(settings.scriptSecret);
+  const res = await fetch(url);
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || 'list 실패');
+  return data; // {items, recurring}
+}
+async function apiPost(body){
+  body.secret = settings.scriptSecret;
+  const res = await fetch(settings.scriptUrl, {
+    method:'POST',
+    headers:{'Content-Type':'text/plain;charset=utf-8'}, // application/json으로 보내면 브라우저가 preflight(OPTIONS)를 보내는데 Apps Script가 이를 처리하지 못해 실패함
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || 'API 실패');
+  return data;
+}
+async function apiSaveItem(item){ return (await apiPost({action:'saveItem', item})).item; }
+async function apiDeleteItem(id){ return apiPost({action:'deleteItem', id}); }
+async function apiSaveRecurring(t){ return (await apiPost({action:'saveRecurring', recurring:t})).recurring; }
+async function apiDeleteRecurring(id){ return apiPost({action:'deleteRecurring', id}); }
 
-function isGoogleConnected(){ return !!(gAccessToken && Date.now() < gTokenExpiry); }
+let syncStatus = 'idle'; // idle | syncing | error
+let syncErrorMsg = '';
 
-function ensureTokenClient(){
-  if(!settings.clientId) return null;
-  if(typeof google === 'undefined' || !google.accounts || !google.accounts.oauth2) return null;
-  if(!gTokenClient || gTokenClient.__clientId !== settings.clientId){
-    gTokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: settings.clientId,
-      scope: 'https://www.googleapis.com/auth/calendar',
-      callback: (resp)=>{
-        if(resp && resp.access_token){
-          gAccessToken = resp.access_token;
-          gTokenExpiry = Date.now() + (resp.expires_in*1000 - 60000);
-          if(currentTab==='settings') renderSettings();
-          syncFromGoogle(false);
-        }
-      },
-      error_callback: (err)=>{ console.warn('google auth error', err); }
-    });
-    gTokenClient.__clientId = settings.clientId;
-  }
-  return gTokenClient;
-}
-function connectGoogle(){
-  const tc = ensureTokenClient();
-  if(!tc){ alert('Google 로그인 준비 중이에요. 잠시 후 다시 시도해주세요.'); return; }
-  tc.requestAccessToken({prompt:'consent'});
-}
-function tryAutoConnect(){
-  if(!settings.clientId) return;
-  const tc = ensureTokenClient();
-  if(!tc) return;
-  try{ tc.requestAccessToken({prompt:''}); }catch(e){ /* ignore */ }
-}
-function disconnectGoogle(){
-  gAccessToken = null; gTokenExpiry = 0;
-  if(currentTab==='settings') renderSettings();
-}
-
-async function gFetch(url, opts){
-  opts = opts || {};
-  opts.headers = Object.assign({}, opts.headers, {Authorization:'Bearer '+gAccessToken});
-  const res = await fetch(url, opts);
-  if(!res.ok){ const t = await res.text(); throw new Error('Google API '+res.status+': '+t.slice(0,200)); }
-  if(res.status===204) return null;
-  return res.json();
-}
-
-function googleEventToItem(ev, calendarId){
-  const existing = items.find(it=>it.googleEventId===ev.id);
-  const allDay = !!ev.start.date;
-  return {
-    id: existing ? existing.id : uid(),
-    type: 'event', calendar: 'personal',
-    title: ev.summary || '(제목 없음)',
-    startDate: allDay ? ev.start.date : ev.start.dateTime.slice(0,10),
-    startTime: allDay ? null : ev.start.dateTime.slice(11,16),
-    endDate: allDay ? addDays(ev.end.date, -1) : ev.end.dateTime.slice(0,10),
-    endTime: allDay ? null : ev.end.dateTime.slice(11,16),
-    memo: ev.location || ev.description || '',
-    done: existing ? existing.done : false,
-    googleEventId: ev.id, googleCalendarId: calendarId
-  };
-}
-
-async function syncFromGoogle(manual){
-  if(!isGoogleConnected()){ if(manual) alert('먼저 개인 캘린더를 연결해주세요.'); return; }
-  try{
-    const calList = await gFetch('https://www.googleapis.com/calendar/v3/users/me/calendarList');
-    const selectedCals = (calList.items||[]).filter(c=>c.selected);
-    const timeMin = new Date(); timeMin.setDate(timeMin.getDate()-14);
-    const timeMax = new Date(); timeMax.setDate(timeMax.getDate()+90);
-    let fetched = [];
-    for(const cal of selectedCals){
-      const url = `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal.id)}/events?singleEvents=true&maxResults=250&orderBy=startTime&timeMin=${encodeURIComponent(timeMin.toISOString())}&timeMax=${encodeURIComponent(timeMax.toISOString())}`;
-      const data = await gFetch(url);
-      (data.items||[]).forEach(ev=>{
-        if(ev.status==='cancelled' || !ev.start) return;
-        fetched.push(googleEventToItem(ev, cal.id));
-      });
-    }
-    const fetchedIds = new Set(fetched.map(f=>f.googleEventId));
-    // 실제 연동 전 보여줬던 데모 시드 데이터(개인/이벤트, googleEventId 없음)는 실제 데이터로 교체
-    items = items.filter(it => !(it.calendar==='personal' && it.type==='event' && !it.googleEventId));
-    items = items.filter(it => !(it.googleEventId && !fetchedIds.has(it.googleEventId)));
-    fetched.forEach(f=>{
-      const idx = items.findIndex(it=>it.googleEventId===f.googleEventId);
-      if(idx>=0) items[idx] = f; else items.push(f);
-    });
+function syncItemRemote(item){
+  if(!apiReady()) return;
+  syncStatus = 'syncing'; if(currentTab==='settings') renderSettings();
+  apiSaveItem(item).then(saved=>{
+    Object.assign(item, saved); // calendarEventId 등 서버가 채운 값 반영
     saveAll();
+    syncStatus = 'idle';
+    if(currentTab==='settings') renderSettings();
+  }).catch(e=>{
+    console.error('저장 동기화 실패', e);
+    syncStatus = 'error'; syncErrorMsg = e.message;
+    if(currentTab==='settings') renderSettings();
+  });
+}
+function deleteItemRemote(id){
+  if(!apiReady()) return;
+  apiDeleteItem(id).catch(e=>{ console.error('삭제 동기화 실패', e); syncStatus='error'; syncErrorMsg=e.message; if(currentTab==='settings') renderSettings(); });
+}
+function syncRecurringRemote(t){
+  if(!apiReady()) return;
+  apiSaveRecurring(t).catch(e=>{ console.error('정기 할일 저장 동기화 실패', e); syncStatus='error'; syncErrorMsg=e.message; if(currentTab==='settings') renderSettings(); });
+}
+function deleteRecurringRemote(id){
+  if(!apiReady()) return;
+  apiDeleteRecurring(id).catch(e=>{ console.error('정기 할일 삭제 동기화 실패', e); syncStatus='error'; syncErrorMsg=e.message; if(currentTab==='settings') renderSettings(); });
+}
+
+/** 페이지 로드 시 서버의 최신 데이터로 새로고침 (여러 기기 간 동기화의 핵심) */
+async function refreshFromServer(manual){
+  if(!apiReady()){ if(manual) alert('먼저 설정에서 Apps Script 연동을 완료해주세요.'); return; }
+  syncStatus = 'syncing'; if(currentTab==='settings') renderSettings();
+  try{
+    const data = await apiList();
+    items = data.items;
+    recurringTemplates = data.recurring;
+    saveAll(); persistRecurring();
+    syncStatus = 'idle';
     renderAll();
-    if(manual) alert('동기화 완료 ('+fetched.length+'개 일정, 선택된 캘린더 '+selectedCals.length+'개)');
+    if(manual) alert('동기화 완료 (항목 '+items.length+'개)');
   }catch(e){
     console.error(e);
+    syncStatus = 'error'; syncErrorMsg = e.message;
+    if(currentTab==='settings') renderSettings();
     if(manual) alert('동기화 중 오류가 발생했어요: '+e.message);
   }
-}
-
-function itemToGoogleEvent(item){
-  const ev = {summary:item.title, description:item.memo||''};
-  if(item.startTime){
-    const eD = item.endDate||item.startDate, eT = item.endTime||item.startTime;
-    ev.start = {dateTime:`${item.startDate}T${item.startTime}:00`, timeZone:'Asia/Seoul'};
-    ev.end = {dateTime:`${eD}T${eT}:00`, timeZone:'Asia/Seoul'};
-  } else {
-    ev.start = {date:item.startDate};
-    ev.end = {date:addDays(item.endDate||item.startDate,1)};
-  }
-  return ev;
-}
-async function pushItemToGoogle(item){
-  if(!isGoogleConnected() || item.type!=='event' || item.calendar!=='personal') return;
-  const calId = item.googleCalendarId || 'primary';
-  const body = itemToGoogleEvent(item);
-  try{
-    if(item.googleEventId){
-      await gFetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events/${item.googleEventId}`,
-        {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-    } else {
-      const created = await gFetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events`,
-        {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
-      item.googleEventId = created.id;
-      item.googleCalendarId = calId;
-      saveAll();
-    }
-  }catch(e){ console.error('구글 캘린더 등록 실패', e); }
-}
-async function deleteItemFromGoogle(item){
-  if(!isGoogleConnected() || !item.googleEventId) return;
-  try{
-    await gFetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(item.googleCalendarId||'primary')}/events/${item.googleEventId}`,
-      {method:'DELETE'});
-  }catch(e){ console.error('구글 캘린더 삭제 실패', e); }
 }
 
 /* ---------------- top header + chips + viewtabs ---------------- */
@@ -690,10 +598,10 @@ function compactDateLabel(dateStr){
 function removeItem(id){
   const it = items.find(x=>x.id===id);
   if(!it) return;
-  if(it.googleEventId) deleteItemFromGoogle(it);
   items = items.filter(x=>x.id!==id);
   saveAll();
   renderAll();
+  deleteItemRemote(id);
 }
 function weekRangeLabel(dateStr){
   const start = weekStart(dateStr);
@@ -830,9 +738,9 @@ function buildHomeRow(it, {leftLabel, bold, doneMode}={}){
   const cb = document.createElement('input'); cb.type='checkbox'; cb.className='hsec-cb';
   cb.checked = !!doneMode;
   if(doneMode){
-    cb.onclick = (e)=>{ e.stopPropagation(); it.done=false; saveAll(); renderAll(); }; // 체크 해제 = 다시 진행중으로 복구
+    cb.onclick = (e)=>{ e.stopPropagation(); it.done=false; saveAll(); renderAll(); syncItemRemote(it); }; // 체크 해제 = 다시 진행중으로 복구
   } else {
-    cb.onclick = (e)=>{ e.stopPropagation(); it.done=true; saveAll(); renderAll(); }; // 체크 = 완료 처리 (삭제 아님)
+    cb.onclick = (e)=>{ e.stopPropagation(); it.done=true; saveAll(); renderAll(); syncItemRemote(it); }; // 체크 = 완료 처리 (삭제 아님)
   }
   row.appendChild(cb);
 
@@ -861,7 +769,7 @@ function buildHomeRow(it, {leftLabel, bold, doneMode}={}){
   } else {
     const star = document.createElement('button'); star.className='star-btn'+(it.important?' important':'');
     star.textContent = it.important?'★':'☆';
-    star.onclick = (e)=>{ e.stopPropagation(); it.important=!it.important; saveAll(); renderAll(); };
+    star.onclick = (e)=>{ e.stopPropagation(); it.important=!it.important; saveAll(); renderAll(); syncItemRemote(it); };
     row.appendChild(star);
   }
 
@@ -1304,7 +1212,7 @@ function renderItemRow(it){
   if(it.type==='todo'){
     const cb = document.createElement('div'); cb.className='checkbox'+(it.done?' checked':'');
     cb.textContent = it.done?'✓':'';
-    cb.onclick = ()=>{ it.done=!it.done; saveAll(); renderAll(); };
+    cb.onclick = ()=>{ it.done=!it.done; saveAll(); renderAll(); syncItemRemote(it); };
     row.appendChild(cb);
   }
 
@@ -1325,11 +1233,6 @@ function renderItemRow(it){
     else if(it.type==='event'){ const t=document.createElement('span'); t.textContent='종일'; meta.appendChild(t); }
     if(it.startDate && it.type==='todo'){ const t=document.createElement('span'); t.textContent=fmtFullDate(it.startDate); meta.appendChild(t); }
   }
-  if(it.type==='event'){
-    const a = document.createElement('a'); a.className='gcal-btn'; a.textContent='G캘린더에 추가'; a.target='_blank'; a.rel='noopener';
-    a.href = gcalUrl(it);
-    meta.appendChild(a);
-  }
   body.appendChild(meta);
   if(it.memo){ const m=document.createElement('div'); m.className='memo-preview'; m.textContent=it.memo; body.appendChild(m); }
   row.appendChild(body);
@@ -1337,7 +1240,7 @@ function renderItemRow(it){
   if(it.type==='todo'){
     const star = document.createElement('button'); star.className='star-btn big'+(it.important?' important':'');
     star.textContent = it.important?'★':'☆';
-    star.onclick = ()=>{ it.important=!it.important; saveAll(); renderAll(); };
+    star.onclick = ()=>{ it.important=!it.important; saveAll(); renderAll(); syncItemRemote(it); };
     row.appendChild(star);
   }
 
@@ -1379,6 +1282,7 @@ function recurringFreqLabel(t){
 }
 
 function ensureRecurringInstances(){
+  if(apiReady()) return; // Apps Script 연동 시엔 서버가 정기 할일을 생성하므로 로컬에서는 만들지 않음 (중복 방지)
   const now = new Date();
   const y = now.getFullYear(), m = now.getMonth()+1;
   let changed = false;
@@ -1458,27 +1362,33 @@ function saveRecurringItem(){
   if(!day || day<1 || day>31){ alert('날짜(일)를 1~31 사이로 입력해주세요'); return; }
   if(r_unit==='year' && (!month || month<1 || month>12)){ alert('월을 1~12 사이로 입력해주세요'); return; }
 
+  let savedTemplate;
   if(editingRecurringId){
     const t = recurringTemplates.find(x=>x.id===editingRecurringId);
     t.title=title; t.calendar=r_cal; t.unit=r_unit; t.intervalCount=intervalCount; t.day=day; t.month=month; t.memo=memo;
     delete t.repeat; // 이전 버전 필드 정리
     if(!t.anchorYM){ const now=new Date(); t.anchorYM = now.getFullYear()+'-'+pad(now.getMonth()+1); }
+    savedTemplate = t;
   } else {
     const now = new Date();
-    recurringTemplates.push({id:uid(), title, calendar:r_cal, unit:r_unit, intervalCount, day, month, memo, active:true,
-      anchorYM: now.getFullYear()+'-'+pad(now.getMonth()+1)});
+    savedTemplate = {id:uid(), title, calendar:r_cal, unit:r_unit, intervalCount, day, month, memo, active:true,
+      anchorYM: now.getFullYear()+'-'+pad(now.getMonth()+1)};
+    recurringTemplates.push(savedTemplate);
   }
   persistRecurring();
   ensureRecurringInstances();
   closeRecurringSheet();
   renderAll();
+  syncRecurringRemote(savedTemplate);
 }
 function deleteCurrentRecurring(){
   if(!editingRecurringId) return;
-  recurringTemplates = recurringTemplates.filter(x=>x.id!==editingRecurringId);
+  const idToDelete = editingRecurringId;
+  recurringTemplates = recurringTemplates.filter(x=>x.id!==idToDelete);
   persistRecurring();
   closeRecurringSheet();
   renderAll();
+  deleteRecurringRemote(idToDelete);
 }
 function toggleRecurringActive(id){
   const t = recurringTemplates.find(x=>x.id===id);
@@ -1487,6 +1397,7 @@ function toggleRecurringActive(id){
   persistRecurring();
   if(t.active) ensureRecurringInstances();
   renderAll();
+  syncRecurringRemote(t);
 }
 
 let recurringOpenSections = { work:true, personal:true };
@@ -1566,7 +1477,7 @@ function buildRecurringRow(t){
 /* ---------------- SETTINGS ---------------- */
 function renderSettings(){
   const el = document.getElementById('screenSettings');
-  const connected = isGoogleConnected();
+  const ready = apiReady();
   el.innerHTML = `
     <div class="settings-link-card" onclick="currentTab='recurring'; renderAll();">
       <div>
@@ -1584,31 +1495,28 @@ function renderSettings(){
     <div class="settings-note">개인 할일 등록 시 이 구분을 선택하면 할일 맨 앞에 태그로 표시돼요. 이름을 눌러 수정하거나 🗑로 삭제할 수 있어요.</div>
 
     <div class="field" style="margin-top:20px;">
-      <label>개인 캘린더 양방향 연동</label>
-      <input type="text" id="s-clientid" placeholder="Google OAuth 클라이언트 ID (xxxx.apps.googleusercontent.com)">
+      <label>Apps Script 연동 (구글시트+캘린더 동기화)</label>
+      <input type="text" id="s-scripturl" placeholder="https://script.google.com/macros/s/xxxx/exec">
     </div>
-    <div class="settings-note">개인 Gmail용 Google Cloud OAuth 클라이언트 ID를 붙여넣어 주세요.</div>
+    <div class="field">
+      <input type="text" id="s-scriptsecret" placeholder="비밀키 (Apps Script setup() 실행 후 로그에 표시됨)">
+    </div>
+    <div class="settings-note">
+      ${ready
+        ? (syncStatus==='error' ? '⚠️ 동기화 오류: '+syncErrorMsg : syncStatus==='syncing' ? '동기화 중...' : '✅ 연동됨 — 회사PC/개인PC/폰 모두 같은 데이터를 봅니다.')
+        : '아직 연동 안 됨 — 위 두 값을 입력하고 저장하면 회사PC/개인PC/폰이 구글시트+캘린더로 하나로 묶여요.'}
+    </div>
 
-    <div class="sheet-actions" style="margin-top:12px;">
-      <button class="btn-primary" onclick="saveSettingsAndConnect()" style="width:100%;">
-        ${connected ? '개인 캘린더 연결 상태: 연결됨 · 다시 로그인' : '개인 캘린더 연결하기'}
-      </button>
-    </div>
-    <div id="gconnect-status" class="settings-note" style="margin-top:8px;">
-      ${connected ? '✅ 연결됨 — 선택(체크)된 캘린더만 가져옵니다.' : '아직 연결 안 됨'}
-    </div>
-    ${connected ? `
+    ${ready ? `
     <div class="sheet-actions" style="margin-top:8px;">
-      <button class="btn-ghost" onclick="syncFromGoogle(true)" style="width:100%;">지금 다시 동기화</button>
-    </div>
-    <div class="sheet-actions" style="margin-top:8px;">
-      <button class="btn-danger" onclick="disconnectGoogle()" style="width:100%;">연결 해제</button>
+      <button class="btn-ghost" onclick="refreshFromServer(true)" style="width:100%;">지금 다시 동기화</button>
     </div>` : ''}
 
     <div class="sheet-actions" style="margin-top:20px;">
       <button class="btn-primary" onclick="saveSettings()" style="width:100%;">저장</button>
     </div>`;
-  document.getElementById('s-clientid').value = settings.clientId || '';
+  document.getElementById('s-scripturl').value = settings.scriptUrl || '';
+  document.getElementById('s-scriptsecret').value = settings.scriptSecret || '';
   renderPersonCatList();
 }
 
@@ -1651,15 +1559,13 @@ function deletePersonCategory(id){
   renderPersonCatList();
 }
 function saveSettings(){
-  settings.clientId = document.getElementById('s-clientid').value.trim();
+  const wasReady = apiReady();
+  settings.scriptUrl = document.getElementById('s-scripturl').value.trim();
+  settings.scriptSecret = document.getElementById('s-scriptsecret').value.trim();
   saveSettingsToStorage();
   alert('저장했어요.');
-}
-function saveSettingsAndConnect(){
-  settings.clientId = document.getElementById('s-clientid').value.trim();
-  saveSettingsToStorage();
-  if(!settings.clientId){ alert('Google 클라이언트 ID를 먼저 입력해주세요.'); return; }
-  connectGoogle();
+  if(apiReady() && !wasReady) refreshFromServer(true);
+  else renderSettings();
 }
 
 /* ---------------- item add/edit sheet ---------------- */
@@ -1747,16 +1653,16 @@ function saveItem(){
   saveAll();
   closeItemSheet();
   renderAll();
-  pushItemToGoogle(savedItem);
+  syncItemRemote(savedItem);
 }
 function deleteCurrentItem(){
   if(!editingId) return;
-  const it = items.find(x=>x.id===editingId);
-  if(it) deleteItemFromGoogle(it);
-  items = items.filter(x=>x.id!==editingId);
+  const idToDelete = editingId;
+  items = items.filter(x=>x.id!==idToDelete);
   saveAll();
   closeItemSheet();
   renderAll();
+  deleteItemRemote(idToDelete);
 }
 
 /* ---------------- bottom nav ---------------- */
@@ -1821,7 +1727,7 @@ function renderAll(){
 
 ensureRecurringInstances();
 renderAll();
-window.addEventListener('load', ()=>{ setTimeout(tryAutoConnect, 400); });
+if(apiReady()) refreshFromServer(false);
 </script>
 </body>
 </html>
