@@ -807,7 +807,7 @@ function homeSectionHeader(key, icon, title, count, accentColor){
 
 let doneSectionsOpen = {};
 
-function buildHomeRow(it, {leftLabel, bold, doneMode}={}){
+function buildHomeRow(it, {leftLabel, bold, doneMode, forceRecurringBadge}={}){
   const row = document.createElement('div'); row.className='hsec-row'+(doneMode?' is-done':'');
   const cb = document.createElement('input'); cb.type='checkbox'; cb.className='hsec-cb';
   cb.checked = !!doneMode;
@@ -831,7 +831,7 @@ function buildHomeRow(it, {leftLabel, bold, doneMode}={}){
 
   const main = document.createElement('div'); main.className='hsec-main';
   const line = document.createElement('div'); line.className='hsec-line';
-  if(it.recurringId){
+  if(it.recurringId || it.calRecurring || forceRecurringBadge){
     const rb = document.createElement('span'); rb.className='recurring-badge'; rb.textContent='정기';
     line.appendChild(rb);
   }
@@ -905,16 +905,19 @@ function buildHomeEventSection(){
   const doneList = items.filter(it=>it.calendar==='personal' && it.type==='event' && it.done)
     .sort((a,b)=> (b.startDate||'').localeCompare(a.startDate||''));
 
-  // 같은 제목으로 2번 이상 나오는 일정 = 반복 패턴이 있는 일정으로 보고 맨 위에 그룹으로 모음
+  // 제목이 2번 이상 겹치거나, 구글 캘린더가 "반복 일정"이라고 알려준 것 = 정기 일정으로 보고 맨 위에 모음
   const byTitle = {};
   list.forEach(it=>{ const key=(it.title||'').trim(); (byTitle[key] = byTitle[key] || []).push(it); });
   const recurringGroups = [];
   const singleList = [];
+  const seenTitles = new Set();
   list.forEach(it=>{
     const key = (it.title||'').trim();
     const group = byTitle[key];
-    if(group.length >= 2){
-      if(!recurringGroups.some(g=>g.title===key)){
+    const isSeries = group.length >= 2 || group.some(x=>x.calRecurring);
+    if(isSeries){
+      if(!seenTitles.has(key)){
+        seenTitles.add(key);
         recurringGroups.push({title: key, items: group, pattern: detectRecurrencePattern(group.map(x=>x.startDate))});
       }
     } else {
@@ -936,6 +939,12 @@ function buildHomeEventSection(){
     }
 
     recurringGroups.forEach(group=>{
+      // 아직 알고 있는 회차가 1개뿐이면 굳이 접었다 펼 필요 없이 바로 한 줄로 표시
+      if(group.items.length === 1){
+        const it = group.items[0];
+        body.appendChild(buildHomeRow(it, {leftLabel: compactDateLabel(it.startDate)+' '+(it.startTime||'종일'), forceRecurringBadge:true}));
+        return;
+      }
       const gKey = 'evt_'+group.title;
       const isOpen = !!expandedRecurringEventGroups[gKey];
       const header = document.createElement('div'); header.className='hsec-row recurring-group-row';
