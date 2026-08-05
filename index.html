@@ -85,7 +85,7 @@
   .hsec-caret{color:var(--sub); font-size:12px;}
   .hsec-body{padding:0 12px 10px; max-height:360px; overflow-y:auto;}
   .hsec-row{display:flex; align-items:flex-start; gap:8px; padding:8px 4px; border-bottom:1px dashed var(--border); cursor:pointer;}
-  .recurring-group-row{background:#fdf8ee; border-radius:8px; margin-bottom:4px; border-bottom:none;}
+  .recurring-group-row{background:#fdf8ee; border-radius:6px; margin:2px 0; border-bottom:1px dashed var(--border); padding:8px 4px;}
   .recurring-group-row .hsec-caret{margin-left:auto; color:var(--sub); font-size:12px; padding-top:2px;}
   .hsec-row:last-of-type{border-bottom:none;}
   .hsec-cb{width:17px; height:17px; border-radius:50%; flex:0 0 17px; margin-top:1px; cursor:pointer; accent-color:var(--todo);}
@@ -990,7 +990,9 @@ function buildHomeEventSection(){
       label.textContent = group.pattern || compactDateLabel(group.items[0].startDate);
       header.appendChild(label);
       const main = document.createElement('div'); main.className='hsec-main';
-      main.textContent = group.title + ' (' + group.items.length + '건)';
+      const mainLine = document.createElement('div'); mainLine.className='hsec-line';
+      mainLine.textContent = group.title + ' (' + group.items.length + '건)';
+      main.appendChild(mainLine);
       header.appendChild(main);
       const caret = document.createElement('span'); caret.className='hsec-caret'; caret.textContent = isOpen?'▾':'▸';
       header.appendChild(caret);
