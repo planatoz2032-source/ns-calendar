@@ -82,7 +82,7 @@
   .hsec-toggle-dot{position:absolute; top:2px; left:2px; width:14px; height:14px; border-radius:50%; background:#fff; transition:left 0.15s;}
   .hsec-toggle.on .hsec-toggle-dot{left:14px;}
   .hsec-caret{color:var(--sub); font-size:12px;}
-  .hsec-body{padding:0 12px 10px;}
+  .hsec-body{padding:0 12px 10px; max-height:360px; overflow-y:auto;}
   .hsec-row{display:flex; align-items:flex-start; gap:8px; padding:8px 4px; border-bottom:1px dashed var(--border); cursor:pointer;}
   .hsec-row:last-of-type{border-bottom:none;}
   .hsec-cb{width:17px; height:17px; border-radius:50%; flex:0 0 17px; margin-top:1px; cursor:pointer; accent-color:var(--todo);}
@@ -92,6 +92,7 @@
   .hsec-date-group:first-child{margin-top:2px;}
   .hsec-main{flex:1; min-width:0;}
   .hsec-line{font-size:13.5px; color:var(--text); word-break:break-word;}
+  .recurring-badge{display:inline-block; font-size:10px; font-weight:700; color:#b6650a; background:#fdf1e2; border-radius:5px; padding:1px 5px; margin-right:5px; vertical-align:middle;}
   .hsec-row.is-done .hsec-line{text-decoration:line-through; color:var(--done);}
   .hsec-row.is-done{opacity:0.75;}
   .hsec-memo{font-size:11.5px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;}
@@ -144,15 +145,10 @@
   .tl-event.personal{background:var(--personal);}
 
   /* week view */
-  .week-grid{display:grid; grid-template-columns:repeat(7,1fr); gap:6px; margin-top:10px;}
-  .week-col{background:var(--card); border-radius:12px; border:1px solid var(--border); padding:6px; min-height:140px;}
-  .week-col .wd{font-size:11px; color:var(--sub); text-align:center;}
-  .week-col .wdate{font-size:13px; font-weight:700; text-align:center; margin-bottom:4px;}
-  .week-col.today .wdate{color:var(--work);}
-  .week-chip{font-size:10px; padding:3px 4px; border-radius:6px; margin-bottom:3px; color:#fff; word-break:break-word;}
-  .week-chip.work{background:var(--work);}
-  .week-chip.personal{background:var(--personal);}
-  .week-chip.todo{background:var(--todo);}
+  .day-label.today{color:var(--work);}
+  .week-day-group{border-bottom:1px dashed var(--border); padding-bottom:6px; margin-bottom:6px;}
+  .week-day-group:last-child{border-bottom:none;}
+  .week-day-group .day-label{cursor:pointer;}
 
   /* gantt chart */
   .gantt-filters{display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;}
@@ -502,19 +498,32 @@ function syncItemRemote(item){
     console.error('저장 동기화 실패', e);
     syncStatus = 'error'; syncErrorMsg = e.message;
     if(currentTab==='settings') renderSettings();
+    alert('⚠️ "'+item.title+'"이 서버(구글시트)에 저장되지 않았어요.\n오류: '+e.message+'\n\n이 기기에는 남아있으니, 인터넷 연결을 확인하고 설정 화면에서 "지금 다시 동기화"를 눌러보세요.');
   });
 }
 function deleteItemRemote(id){
   if(!apiReady()) return;
-  apiDeleteItem(id).catch(e=>{ console.error('삭제 동기화 실패', e); syncStatus='error'; syncErrorMsg=e.message; if(currentTab==='settings') renderSettings(); });
+  apiDeleteItem(id).catch(e=>{
+    console.error('삭제 동기화 실패', e);
+    syncStatus='error'; syncErrorMsg=e.message; if(currentTab==='settings') renderSettings();
+    alert('⚠️ 삭제한 항목이 서버(구글시트)에는 반영되지 않았어요.\n오류: '+e.message);
+  });
 }
 function syncRecurringRemote(t){
   if(!apiReady()) return;
-  apiSaveRecurring(t).catch(e=>{ console.error('정기 할일 저장 동기화 실패', e); syncStatus='error'; syncErrorMsg=e.message; if(currentTab==='settings') renderSettings(); });
+  apiSaveRecurring(t).catch(e=>{
+    console.error('정기 할일 저장 동기화 실패', e);
+    syncStatus='error'; syncErrorMsg=e.message; if(currentTab==='settings') renderSettings();
+    alert('⚠️ 정기 할일 "'+t.title+'"이 서버(구글시트)에 저장되지 않았어요.\n오류: '+e.message+'\n\n설정 화면에서 "지금 다시 동기화" 또는 "로컬 데이터를 서버로 올리기"를 눌러보세요.');
+  });
 }
 function deleteRecurringRemote(id){
   if(!apiReady()) return;
-  apiDeleteRecurring(id).catch(e=>{ console.error('정기 할일 삭제 동기화 실패', e); syncStatus='error'; syncErrorMsg=e.message; if(currentTab==='settings') renderSettings(); });
+  apiDeleteRecurring(id).catch(e=>{
+    console.error('정기 할일 삭제 동기화 실패', e);
+    syncStatus='error'; syncErrorMsg=e.message; if(currentTab==='settings') renderSettings();
+    alert('⚠️ 정기 할일 삭제가 서버(구글시트)에는 반영되지 않았어요.\n오류: '+e.message);
+  });
 }
 
 /** 페이지 로드 시 서버의 최신 데이터로 새로고침 (여러 기기 간 동기화의 핵심) */
@@ -792,7 +801,12 @@ function buildHomeRow(it, {leftLabel, bold, doneMode}={}){
   }
 
   const main = document.createElement('div'); main.className='hsec-main';
-  const line = document.createElement('div'); line.className='hsec-line'; line.textContent = it.title;
+  const line = document.createElement('div'); line.className='hsec-line';
+  if(it.recurringId){
+    const rb = document.createElement('span'); rb.className='recurring-badge'; rb.textContent='정기';
+    line.appendChild(rb);
+  }
+  line.appendChild(document.createTextNode(it.title));
   main.appendChild(line);
   if(it.memo){ const m=document.createElement('div'); m.className='hsec-memo'; m.textContent=it.memo; main.appendChild(m); }
   row.appendChild(main);
@@ -829,6 +843,14 @@ function buildDoneToggle(key, doneList, body, labelFn){
 function buildHomeTodoSection(cal, title, icon, accentColor, tintColor){
   let list = items.filter(it=>it.calendar===cal && it.type==='todo' && !it.done);
   list = list.sort((a,b)=> ((b.important?1:0)-(a.important?1:0)) || (a.startDate||'9999').localeCompare(b.startDate||'9999'));
+  // 같은 정기 업무(recurringId)는 매달치를 다 나열하지 않고, 가장 가까운(중요한) 하나만 [정기] 배지로 대표 표시
+  const seenRecurring = new Set();
+  list = list.filter(it=>{
+    if(!it.recurringId) return true;
+    if(seenRecurring.has(it.recurringId)) return false;
+    seenRecurring.add(it.recurringId);
+    return true;
+  });
   const doneList = items.filter(it=>it.calendar===cal && it.type==='todo' && it.done)
     .sort((a,b)=> (b.startDate||'').localeCompare(a.startDate||''));
 
@@ -1028,23 +1050,24 @@ function buildDayView(){
 function buildWeekView(){
   const wrap = document.createElement('div');
   const start = weekStart(selectedDate);
-  const grid = document.createElement('div'); grid.className='week-grid';
   for(let i=0;i<7;i++){
     const dStr = addDays(start, i);
-    const col = document.createElement('div'); col.className='week-col'+(dStr===todayStr()?' today':'');
-    col.innerHTML = `<div class="wd">${weekdayKr(dStr)}</div><div class="wdate">${parseDate(dStr).getDate()}</div>`;
+    const isToday = dStr===todayStr();
+    const group = document.createElement('div'); group.className='day-group week-day-group';
+    const label = document.createElement('div'); label.className='day-label'+(isToday?' today':'');
+    label.textContent = fmtFullDate(dStr);
+    label.onclick = ()=>{ selectedDate=dStr; scheduleView='day'; renderAll(); };
+    group.appendChild(label);
+
     const dayItems = sortByTime(itemsOnDate(dStr));
-    dayItems.forEach(it=>{
-      const chip = document.createElement('div');
-      chip.className = 'week-chip ' + (it.type==='todo'?'todo':it.calendar);
-      chip.textContent = it.title;
-      chip.onclick = ()=> openItemSheet(it.id);
-      col.appendChild(chip);
-    });
-    col.onclick = (e)=>{ if(e.target===col){ selectedDate=dStr; scheduleView='day'; renderAll(); } };
-    grid.appendChild(col);
+    if(dayItems.length===0){
+      const e=document.createElement('div'); e.className='empty'; e.textContent='일정/할일이 없어요.';
+      group.appendChild(e);
+    } else {
+      dayItems.forEach(it=> group.appendChild(renderItemRow(it)));
+    }
+    wrap.appendChild(group);
   }
-  wrap.appendChild(grid);
   return wrap;
 }
 
