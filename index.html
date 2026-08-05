@@ -496,17 +496,33 @@ async function apiList(){
   if(!data.ok) throw new Error(data.error || 'list 실패');
   return data; // {items, recurring}
 }
-async function apiPost(body){
-  body.secret = settings.scriptSecret;
-  const res = await fetch(settings.scriptUrl, {
-    method:'POST',
-    headers:{'Content-Type':'text/plain;charset=utf-8'}, // application/json으로 보내면 브라우저가 preflight(OPTIONS)를 보내는데 Apps Script가 이를 처리하지 못해 실패함
-    body: JSON.stringify(body)
-  });
-  const data = await res.json();
+async function apiPost(body, retriesLeft){
+  if(retriesLeft===undefined) retriesLeft = 2;
+  body = Object.assign({}, body, {secret: settings.scriptSecret});
+  let text;
+  try{
+    const res = await fetch(settings.scriptUrl, {
+      method:'POST',
+      headers:{'Content-Type':'text/plain;charset=utf-8'}, // application/json으로 보내면 브라우저가 preflight(OPTIONS)를 보내는데 Apps Script가 이를 처리하지 못해 실패함
+      body: JSON.stringify(body)
+    });
+    text = await res.text();
+  }catch(networkErr){
+    if(retriesLeft>0){ await sleep(900); return apiPost(body, retriesLeft-1); }
+    throw networkErr;
+  }
+  let data;
+  try{
+    data = JSON.parse(text);
+  }catch(parseErr){
+    // 구글 쪽에서 가끔 JSON 대신 로그인/오류 HTML 페이지를 보내는 경우가 있어요. 잠시 후 재시도.
+    if(retriesLeft>0){ await sleep(900); return apiPost(body, retriesLeft-1); }
+    throw new Error('서버가 예상치 못한 응답을 보냈어요(JSON 아님). 잠시 후 다시 시도해주세요.');
+  }
   if(!data.ok) throw new Error(data.error || 'API 실패');
   return data;
 }
+function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
 async function apiSaveItem(item){ return (await apiPost({action:'saveItem', item})).item; }
 async function apiDeleteItem(id){ return apiPost({action:'deleteItem', id}); }
 async function apiSaveRecurring(t){ return (await apiPost({action:'saveRecurring', recurring:t})).recurring; }
@@ -593,22 +609,42 @@ async function uploadAllLocalToServer(){
   if(!apiReady()){ alert('먼저 Apps Script 연동을 저장해주세요.'); return; }
   if(!confirm('이 기기에 있는 로컬 항목을 전부 서버(구글시트)로 올릴까요?\n서버에 이미 같은 id가 있으면 그 항목은 덮어써요.')) return;
   syncStatus = 'syncing'; renderSettings();
-  try{
-    for(const t of recurringTemplates){ await apiSaveRecurring(t); }
-    for(const it of items){
+
+  const failedRecurring = [];
+  const failedItems = [];
+
+  for(const t of recurringTemplates){
+    try{ await apiSaveRecurring(t); }
+    catch(e){ console.error('정기 할일 업로드 실패', t.title, e); failedRecurring.push(t.title); }
+    await sleep(250);
+  }
+  for(const it of items){
+    try{
       const saved = await apiSaveItem(it);
       Object.assign(it, saved);
+    }catch(e){
+      console.error('항목 업로드 실패', it.title, e);
+      failedItems.push(it.title);
     }
-    saveAll(); persistRecurring();
+    await sleep(250);
+  }
+
+  saveAll(); persistRecurring();
+
+  if(failedRecurring.length===0 && failedItems.length===0){
     syncStatus = 'idle';
     alert('업로드 완료! 구글시트에서 확인해보세요.');
-    renderSettings();
-  }catch(e){
-    console.error(e);
-    syncStatus = 'error'; syncErrorMsg = e.message;
-    alert('업로드 중 오류가 발생했어요: '+e.message);
-    renderSettings();
+  } else {
+    syncStatus = 'error';
+    syncErrorMsg = (failedRecurring.length+failedItems.length)+'개 실패';
+    alert(
+      '일부만 업로드됐어요.\n\n'+
+      (failedRecurring.length ? '정기 할일 실패: '+failedRecurring.join(', ')+'\n' : '')+
+      (failedItems.length ? '항목 실패: '+failedItems.join(', ')+'\n' : '')+
+      '\n"이 기기의 로컬 데이터를 서버로 올리기"를 한 번 더 눌러서 재시도해보세요.'
+    );
   }
+  renderSettings();
 }
 
 /* ---------------- top header + chips + viewtabs ---------------- */
