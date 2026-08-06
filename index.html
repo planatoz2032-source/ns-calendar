@@ -40,10 +40,12 @@
   #topHeader .today-btn{font-size:12px !important; font-weight:600; border:1px solid var(--border) !important; border-radius:999px; padding:4px 10px !important;}
 
   .chips{display:flex; gap:8px; padding:10px 16px;}
+  .chips[hidden]{display:none;}
   .chip{flex:1; text-align:center; padding:8px 0; border-radius:10px; border:1px solid var(--border); background:var(--bg); font-size:13px; font-weight:600; cursor:pointer; color:var(--sub);}
   .chip.active{background:var(--text); color:#fff; border-color:var(--text);}
 
   .viewtabs{display:flex; gap:8px; padding:0 16px 10px;}
+  .viewtabs[hidden]{display:none;}
   .viewtabs button{flex:1; padding:7px 0; border-radius:999px; border:1px solid var(--border); background:var(--card); font-size:13px; cursor:pointer; color:var(--sub);}
   .viewtabs button.active{background:#eef2ff; color:var(--work); border-color:var(--work); font-weight:700;}
 
@@ -135,6 +137,29 @@
   .item .edit{border:none; background:var(--bg); border-radius:8px; width:28px; height:28px; font-size:13px; cursor:pointer;}
   .empty{text-align:center; color:var(--sub); font-size:13px; padding:30px 0;}
 
+  /* news tab */
+  .news-cat-row{display:flex; gap:6px; padding:10px 0 12px; overflow-x:auto;}
+  .news-cat-chip{flex:0 0 auto; padding:6px 12px; border-radius:999px; border:1px solid var(--border); background:var(--card); font-size:12.5px; font-weight:600; cursor:pointer; color:var(--sub); white-space:nowrap;}
+  .news-cat-chip.active{background:var(--text); color:#fff; border-color:var(--text);}
+  .news-refresh-row{display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;}
+  .news-refresh-row .news-updated{font-size:11.5px; color:var(--sub);}
+  .news-refresh-row button{background:none; border:1px solid var(--border); border-radius:999px; padding:5px 10px; font-size:11.5px; color:var(--sub); cursor:pointer;}
+  .news-card{display:block; background:var(--card); border-radius:14px; padding:12px 14px; margin-bottom:8px; border:1px solid var(--border); text-decoration:none; color:inherit;}
+  .news-card:active{background:#f8f9fb;}
+  .news-meta-row{display:flex; align-items:center; gap:6px; margin-bottom:6px; flex-wrap:wrap;}
+  .news-badge{font-size:10.5px; padding:2px 7px; border-radius:6px; font-weight:700;}
+  .news-badge.dev{background:#e8f0fe; color:var(--work);}
+  .news-badge.plan{background:#e3faf1; color:var(--personal);}
+  .news-badge.tax{background:#fef3e2; color:var(--todo);}
+  .news-badge.etc{background:#f1f2f5; color:var(--sub);}
+  .news-source{font-size:11.5px; color:var(--sub);}
+  .news-time{font-size:11.5px; color:var(--sub);}
+  .news-title{font-size:14.5px; font-weight:600; line-height:1.4; margin-bottom:3px; word-break:break-word;}
+  .news-desc{font-size:12.5px; color:var(--sub); line-height:1.5; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;}
+  .news-source-error{font-size:11.5px; color:var(--sub); padding:6px 2px;}
+  .news-star{position:absolute; top:10px; right:10px; background:none; border:none; font-size:18px; line-height:1; color:#d0d3da; cursor:pointer; padding:2px;}
+  .news-star.on{color:#f5b400;}
+
   /* day timeline */
   .allday-chip{display:inline-block; font-size:12px; padding:5px 9px; border-radius:8px; margin:2px 4px 2px 0;}
   .allday-chip.work{background:#e8f0fe; color:var(--work);}
@@ -225,40 +250,6 @@
   .accordion-caret{color:var(--sub); font-size:12px;}
   .accordion-body{padding:8px 10px 2px;}
   a{color:inherit;}
-  /* 건강 프로젝트 */
-  #screenHealth{padding-bottom:20px;}
-  .health-card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:12px;}
-  .health-card-title{font-size:13.5px; font-weight:700; color:var(--text); margin-bottom:10px;}
-  .health-goal-row{display:flex; align-items:baseline; justify-content:space-between; margin-bottom:10px;}
-  .health-goal-value{font-size:22px; font-weight:800; color:#0f8a5f;}
-  .health-goal-unit{font-size:14px; font-weight:600;}
-  .health-goal-of{font-size:12px; color:var(--sub); font-weight:500;}
-  .health-edit-goal{background:none; border:1px solid var(--border); border-radius:8px; padding:5px 10px; font-size:11.5px; color:var(--sub); cursor:pointer;}
-  .health-progress-bar{background:#e8f5ef; border-radius:999px; height:12px; overflow:hidden;}
-  .health-progress-fill{background:linear-gradient(90deg,#34c185,#0f8a5f); height:100%; border-radius:999px; transition:width 0.3s;}
-  .health-progress-pct{font-size:11.5px; color:var(--sub); margin-top:6px; text-align:right;}
-  .health-cmp-row{display:flex; align-items:center; gap:8px; margin-bottom:8px;}
-  .health-cmp-label{flex:0 0 44px; font-size:12px; color:var(--sub);}
-  .health-cmp-track{flex:1; background:#f1f1f1; border-radius:6px; height:16px; overflow:hidden;}
-  .health-cmp-fill{height:100%; border-radius:6px;}
-  .health-cmp-fill.this{background:#3b82f6;}
-  .health-cmp-fill.last{background:#c7c9cf;}
-  .health-cmp-value{flex:0 0 44px; font-size:12px; text-align:right; color:var(--text);}
-  .health-cmp-diff{font-size:12.5px; font-weight:700; margin-top:4px;}
-  .health-cmp-diff.up{color:#0f8a5f;}
-  .health-cmp-diff.down{color:#d84343;}
-  .health-add-row{display:flex; gap:8px; margin-bottom:14px;}
-  .health-add-btn{flex:1; background:#eefaf3; color:#0f8a5f; border:1px solid #cdeedd; border-radius:10px; padding:10px; font-size:13px; font-weight:600; cursor:pointer;}
-  .health-add-btn.meal{background:#fff4ea; color:#b6650a; border-color:#f3e0c4;}
-  .health-table-section{margin-bottom:16px;}
-  .health-table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:10px;}
-  .health-table{width:100%; border-collapse:collapse; font-size:12px; white-space:nowrap;}
-  .health-table th{text-align:left; padding:8px 10px; background:var(--bg); color:var(--sub); font-weight:600; border-bottom:1px solid var(--border);}
-  .health-table td{padding:8px 10px; border-bottom:1px solid var(--border);}
-  .health-table tr:last-child td{border-bottom:none;}
-  .health-row-btns{display:flex; gap:4px;}
-  .health-row-btn{background:none; border:none; cursor:pointer; font-size:13px; padding:2px 4px; color:var(--sub);}
-  .meal-type-badge{background:#fff4ea; color:#b6650a; font-size:11px; font-weight:700; padding:2px 7px; border-radius:6px;}
 </style>
 </head>
 <body>
@@ -275,7 +266,7 @@
 <main class="screen" id="screenFavorites" hidden></main>
 <main class="screen" id="screenSettings" hidden></main>
 <main class="screen" id="screenRecurring" hidden></main>
-<main class="screen" id="screenHealth" hidden></main>
+<main class="screen" id="screenNews" hidden></main>
 <button id="fabAdd" title="새 항목 추가">+</button>
 </div>
 
@@ -285,6 +276,7 @@
   <button data-tab="todo"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5l1.5 1.5l2.5 -2.5"/><path d="M3.5 11.5l1.5 1.5l2.5 -2.5"/><path d="M3.5 17.5l1.5 1.5l2.5 -2.5"/><path d="M11 6l9 0"/><path d="M11 12l9 0"/><path d="M11 18l9 0"/></svg></span><span>할일</span></button>
   <button data-tab="favorites"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1.002l3.086 -6.253l3.086 6.253l6.9 1.002l-5 4.867l1.179 6.873z"/></svg></span><span>즐겨찾기</span></button>
   <button data-tab="settings"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg></span><span>설정</span></button>
+  <button data-tab="news"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a2 2 0 0 1 2 2v13a2.5 2.5 0 0 1 -2.5 2.5h-11.5a2 2 0 0 1 -2 -2v-13a2 2 0 0 1 2 -2z"/><path d="M18 8h2a1 1 0 0 1 1 1v10a1.5 1.5 0 0 1 -3 0"/><path d="M8 8h5"/><path d="M8 12h5"/><path d="M8 16h3"/></svg></span><span>부동산뉴스</span></button>
 </nav>
 
 <!-- Add/Edit sheet -->
@@ -427,78 +419,6 @@
   </div>
 </div>
 
-<!-- 운동기록 추가/수정 -->
-<div class="sheet-backdrop" id="exerciseBackdrop">
-  <div class="sheet">
-    <h2 id="exerciseSheetTitle">운동기록 추가</h2>
-    <div class="field">
-      <label>날짜</label>
-      <input type="date" id="ex-date">
-    </div>
-    <div class="row2">
-      <div class="field">
-        <label>시작시간</label>
-        <input type="time" id="ex-start">
-      </div>
-      <div class="field">
-        <label>종료시간</label>
-        <input type="time" id="ex-end">
-      </div>
-    </div>
-    <div class="field">
-      <label>운동내용</label>
-      <input type="text" id="ex-content" placeholder="예: 러닝 5km, 헬스 상체">
-    </div>
-    <div class="field">
-      <label>체중(kg) (선택)</label>
-      <input type="text" id="ex-weight" placeholder="예: 68.5" inputmode="decimal">
-    </div>
-    <div class="settings-note">시작·종료시간을 입력하면 운동시간이 자동으로 계산돼요.</div>
-    <div class="sheet-actions">
-      <button class="btn-ghost" onclick="closeExerciseSheet()">취소</button>
-      <button class="btn-danger" id="exDeleteBtn" style="display:none;" onclick="deleteCurrentExercise()">삭제</button>
-      <button class="btn-primary" onclick="saveExerciseEntry()">저장</button>
-    </div>
-  </div>
-</div>
-
-<!-- 식사기록 추가/수정 -->
-<div class="sheet-backdrop" id="mealBackdrop">
-  <div class="sheet">
-    <h2 id="mealSheetTitle">식사기록 추가</h2>
-    <div class="field">
-      <label>날짜</label>
-      <input type="date" id="meal-date">
-    </div>
-    <div class="field">
-      <label>구분</label>
-      <div class="seg" id="mealTypeSeg">
-        <button data-v="아침" class="active">아침</button>
-        <button data-v="점심">점심</button>
-        <button data-v="저녁">저녁</button>
-        <button data-v="간식">간식</button>
-      </div>
-    </div>
-    <div class="field">
-      <label>음식</label>
-      <input type="text" id="meal-food" placeholder="예: 닭가슴살 샐러드">
-    </div>
-    <div class="field">
-      <label>섭취량</label>
-      <input type="text" id="meal-amount" placeholder="예: 1인분, 200g">
-    </div>
-    <div class="field">
-      <label>메모 (선택)</label>
-      <input type="text" id="meal-memo" placeholder="참고사항">
-    </div>
-    <div class="sheet-actions">
-      <button class="btn-ghost" onclick="closeMealSheet()">취소</button>
-      <button class="btn-danger" id="mealDeleteBtn" style="display:none;" onclick="deleteCurrentMeal()">삭제</button>
-      <button class="btn-primary" onclick="saveMealEntry()">저장</button>
-    </div>
-  </div>
-</div>
-
 <script>
 const STORAGE_KEY = 'ns_dashboard_items_v2';
 const SETTINGS_KEY = 'ns_dashboard_settings_v1';
@@ -535,16 +455,6 @@ if(!settings.personalCategories) settings.personalCategories = [
 const RECURRING_KEY = 'ns_recurring_templates_v1';
 let recurringTemplates = JSON.parse(localStorage.getItem(RECURRING_KEY) || '[]');
 function persistRecurring(){ localStorage.setItem(RECURRING_KEY, JSON.stringify(recurringTemplates)); }
-
-const EXERCISE_KEY = 'ns_exercise_logs_v1';
-let exerciseLogs = JSON.parse(localStorage.getItem(EXERCISE_KEY) || '[]');
-function persistExerciseLogs(){ localStorage.setItem(EXERCISE_KEY, JSON.stringify(exerciseLogs)); }
-
-const MEAL_KEY = 'ns_meal_logs_v1';
-let mealLogs = JSON.parse(localStorage.getItem(MEAL_KEY) || '[]');
-function persistMealLogs(){ localStorage.setItem(MEAL_KEY, JSON.stringify(mealLogs)); }
-
-if(!settings.exerciseGoalMinutes) settings.exerciseGoalMinutes = 600; // 월 목표(분), 기본 10시간
 
 let currentTab = 'home';
 let currentFilter = 'all'; // all | work | personal
@@ -648,10 +558,6 @@ async function apiSaveItem(item){ return (await apiPost({action:'saveItem', item
 async function apiDeleteItem(id){ return apiPost({action:'deleteItem', id}); }
 async function apiSaveRecurring(t){ return (await apiPost({action:'saveRecurring', recurring:t})).recurring; }
 async function apiDeleteRecurring(id){ return apiPost({action:'deleteRecurring', id}); }
-async function apiSaveExercise(log){ return (await apiPost({action:'saveExercise', log})).log; }
-async function apiDeleteExercise(id){ return apiPost({action:'deleteExercise', id}); }
-async function apiSaveMeal(meal){ return (await apiPost({action:'saveMeal', meal})).meal; }
-async function apiDeleteMeal(id){ return apiPost({action:'deleteMeal', id}); }
 
 let syncStatus = 'idle'; // idle | syncing | error
 let syncErrorMsg = '';
@@ -695,36 +601,6 @@ function deleteRecurringRemote(id){
     alert('⚠️ 정기 할일 삭제가 서버(구글시트)에는 반영되지 않았어요.\n오류: '+e.message);
   });
 }
-function syncExerciseRemote(log){
-  if(!apiReady()) return;
-  apiSaveExercise(log).then(saved=>{ Object.assign(log, saved); persistExerciseLogs(); })
-  .catch(e=>{
-    console.error('운동기록 저장 동기화 실패', e);
-    alert('⚠️ 운동기록이 서버(구글시트)에 저장되지 않았어요.\n오류: '+e.message);
-  });
-}
-function deleteExerciseRemote(id){
-  if(!apiReady()) return;
-  apiDeleteExercise(id).catch(e=>{
-    console.error('운동기록 삭제 동기화 실패', e);
-    alert('⚠️ 운동기록 삭제가 서버에는 반영되지 않았어요.\n오류: '+e.message);
-  });
-}
-function syncMealRemote(meal){
-  if(!apiReady()) return;
-  apiSaveMeal(meal).then(saved=>{ Object.assign(meal, saved); persistMealLogs(); })
-  .catch(e=>{
-    console.error('식사기록 저장 동기화 실패', e);
-    alert('⚠️ 식사기록이 서버(구글시트)에 저장되지 않았어요.\n오류: '+e.message);
-  });
-}
-function deleteMealRemote(id){
-  if(!apiReady()) return;
-  apiDeleteMeal(id).catch(e=>{
-    console.error('식사기록 삭제 동기화 실패', e);
-    alert('⚠️ 식사기록 삭제가 서버에는 반영되지 않았어요.\n오류: '+e.message);
-  });
-}
 
 /** 페이지 로드 시 서버의 최신 데이터로 새로고침 (여러 기기 간 동기화의 핵심) */
 async function refreshFromServer(manual){
@@ -747,9 +623,7 @@ async function refreshFromServer(manual){
     }
     items = data.items;
     recurringTemplates = data.recurring;
-    exerciseLogs = data.exerciseLogs || [];
-    mealLogs = data.mealLogs || [];
-    saveAll(); persistRecurring(); persistExerciseLogs(); persistMealLogs();
+    saveAll(); persistRecurring();
     syncStatus = 'idle';
     renderAll();
     if(manual) alert('동기화 완료 (항목 '+items.length+'개)');
@@ -769,8 +643,6 @@ async function uploadAllLocalToServer(){
 
   const failedRecurring = [];
   const failedItems = [];
-  const failedExercise = [];
-  const failedMeals = [];
 
   for(const t of recurringTemplates){
     try{ await apiSaveRecurring(t); }
@@ -787,32 +659,19 @@ async function uploadAllLocalToServer(){
     }
     await sleep(250);
   }
-  for(const log of exerciseLogs){
-    try{ const saved = await apiSaveExercise(log); Object.assign(log, saved); }
-    catch(e){ console.error('운동기록 업로드 실패', log['운동내용'], e); failedExercise.push(log['운동내용']||log['날짜']); }
-    await sleep(250);
-  }
-  for(const meal of mealLogs){
-    try{ const saved = await apiSaveMeal(meal); Object.assign(meal, saved); }
-    catch(e){ console.error('식사기록 업로드 실패', meal['음식'], e); failedMeals.push(meal['음식']||meal['날짜']); }
-    await sleep(250);
-  }
 
-  saveAll(); persistRecurring(); persistExerciseLogs(); persistMealLogs();
+  saveAll(); persistRecurring();
 
-  const totalFailed = failedRecurring.length+failedItems.length+failedExercise.length+failedMeals.length;
-  if(totalFailed===0){
+  if(failedRecurring.length===0 && failedItems.length===0){
     syncStatus = 'idle';
     alert('업로드 완료! 구글시트에서 확인해보세요.');
   } else {
     syncStatus = 'error';
-    syncErrorMsg = totalFailed+'개 실패';
+    syncErrorMsg = (failedRecurring.length+failedItems.length)+'개 실패';
     alert(
       '일부만 업로드됐어요.\n\n'+
       (failedRecurring.length ? '정기 할일 실패: '+failedRecurring.join(', ')+'\n' : '')+
       (failedItems.length ? '항목 실패: '+failedItems.join(', ')+'\n' : '')+
-      (failedExercise.length ? '운동기록 실패: '+failedExercise.join(', ')+'\n' : '')+
-      (failedMeals.length ? '식사기록 실패: '+failedMeals.join(', ')+'\n' : '')+
       '\n"이 기기의 로컬 데이터를 서버로 올리기"를 한 번 더 눌러서 재시도해보세요.'
     );
   }
@@ -843,12 +702,8 @@ function renderHeader(){
     h.innerHTML = `<div class="title-row">
         <h1><button class="back-btn" onclick="currentTab='settings'; renderAll();">‹</button>🔁 정기 할일 관리</h1>
       </div>`;
-  } else if(currentTab==='health'){
-    h.innerHTML = `<div class="title-row">
-        <h1><button class="back-btn" onclick="currentTab='settings'; renderAll();">‹</button>💪 건강 프로젝트</h1>
-      </div>`;
   } else {
-    const titles = {home:'📅 NS Planner', todo:'☑️ 할일', favorites:'⭐ 즐겨찾기', settings:'⚙️ 설정'};
+    const titles = {home:'📅 NS Planner', todo:'☑️ 할일', favorites:'⭐ 즐겨찾기', settings:'⚙️ 설정', news:'🏠 부동산 뉴스'};
     const icons = currentTab==='home'
       ? `<span class="header-icons">
            <button class="header-icon-btn" onclick="openSearch()" title="검색">🔍</button>
@@ -1847,14 +1702,6 @@ function renderSettings(){
       <span style="color:var(--sub);">›</span>
     </div>
 
-    <div class="settings-link-card" onclick="currentTab='health'; renderAll();">
-      <div>
-        <div class="l-title">💪 건강 프로젝트</div>
-        <div class="l-sub">운동기록 ${exerciseLogs.length}개 · 식사기록 ${mealLogs.length}개</div>
-      </div>
-      <span style="color:var(--sub);">›</span>
-    </div>
-
     <div class="field" style="margin-top:20px;">
       <label>개인 할일 구분 (나 / 아들 / 가족 등)</label>
       <div id="personCatList" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
@@ -2073,277 +1920,177 @@ function renderFavorites(){
   el.appendChild(box);
 }
 
-/* ---------------- 건강 프로젝트 ---------------- */
-function monthKeyOf(dateStr){ return (dateStr||'').slice(0,7); } // 'YYYY-MM'
-function currentMonthKey(){ const d=new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1); }
-function prevMonthKey(){ const d=new Date(); d.setMonth(d.getMonth()-1); return d.getFullYear()+'-'+pad(d.getMonth()+1); }
-function monthLabel(key){ const p=key.split('-'); return p[0]+'년 '+parseInt(p[1],10)+'월'; }
-function sumExerciseMinutes(mKey){
-  return exerciseLogs.filter(l=> monthKeyOf(l['날짜'])===mKey)
-    .reduce((s,l)=> s + (Number(l['운동시간(분)'])||0), 0);
+/* ---------------- 부동산 뉴스 탭 ---------------- */
+const NEWS_SOURCES = [
+  { name:'한국경제 부동산', rss:'https://www.hankyung.com/feed/realestate' },
+  { name:'한국경제 경제', rss:'https://www.hankyung.com/feed/economy' },
+  { name:'아시아경제 부동산', rss:'https://view.asiae.co.kr/rss/realestate.htm' },
+  { name:'연합뉴스 경제', rss:'https://www.yna.co.kr/rss/economy.xml' },
+  { name:'연합뉴스 오피니언', rss:'https://www.yna.co.kr/rss/opinion.xml' },
+  { name:'내손안의 서울(주택)', rss:'https://mediahub.seoul.go.kr/news/rss/03' },
+  { name:'내손안의 서울(경제)', rss:'https://mediahub.seoul.go.kr/news/rss/04' },
+  { name:'내손안의 서울(교통)', rss:'https://mediahub.seoul.go.kr/news/rss/01' },
+];
+// RSS로 못 가져오는 곳은 바로가기 링크로만 제공
+const NEWS_LINKS = [
+  { name:'네이버 뉴스(부동산)', url:'https://land.naver.com/news' },
+  { name:'하우징헤럴드', url:'https://www.housingherald.co.kr' },
+  { name:'한국주택경제신문', url:'https://www.arunews.com' },
+  { name:'뉴스1', url:'https://www.news1.kr' },
+];
+const NEWS_CAT_KEYWORDS = {
+  tax:['세금','종부세','양도세','취득세','보유세','증여세','상속세','과세','공시가'],
+  plan:['도시계획','지구단위','정비구역','용도지역','기본계획','도시재생','지구지정','토지이용'],
+  dev:['재건축','재개발','분양','착공','준공','리모델링','정비사업','공급','시공사','조합'],
+};
+const NEWS_BOOKMARK_KEY = 'ns_news_bookmarks_v1';
+let newsQuery = '';
+let newsShowBookmarksOnly = false;
+let newsState = { loading:false, items:[], sourceErrors:[], lastFetched:null };
+let newsBookmarks = JSON.parse(localStorage.getItem(NEWS_BOOKMARK_KEY) || '{}');
+function saveNewsBookmarks(){ localStorage.setItem(NEWS_BOOKMARK_KEY, JSON.stringify(newsBookmarks)); }
+function toggleNewsBookmark(link){
+  if(newsBookmarks[link]) delete newsBookmarks[link];
+  else {
+    const it = newsState.items.find(x=>x.link===link) || Object.values(newsBookmarks).find(x=>x.link===link);
+    if(it) newsBookmarks[link] = it;
+  }
+  saveNewsBookmarks();
+  renderNews();
 }
 
-function editExerciseGoal(){
-  const v = prompt('이번 달 운동 목표(분)를 입력해주세요\n예: 600 (하루 20분 x 30일)', settings.exerciseGoalMinutes||600);
-  if(v===null) return;
-  const n = parseInt(v,10);
-  if(!n || n<1){ alert('올바른 숫자를 입력해주세요'); return; }
-  settings.exerciseGoalMinutes = n;
-  saveSettingsToStorage();
-  renderHealthPage();
+function categorizeNews(text){
+  for(const cat of ['tax','plan','dev']){
+    if(NEWS_CAT_KEYWORDS[cat].some(k=>text.includes(k))) return cat;
+  }
+  return 'etc';
 }
+function newsTimeAgo(dateStr){
+  const d = new Date(dateStr);
+  if(isNaN(d.getTime())) return '';
+  const diffMin = Math.floor((Date.now()-d.getTime())/60000);
+  if(diffMin < 1) return '방금 전';
+  if(diffMin < 60) return diffMin+'분 전';
+  const diffH = Math.floor(diffMin/60);
+  if(diffH < 24) return diffH+'시간 전';
+  return Math.floor(diffH/24)+'일 전';
+}
+async function fetchAllNews(){
+  newsState.loading = true;
+  newsState.sourceErrors = [];
+  const results = await Promise.allSettled(NEWS_SOURCES.map(src =>
+    fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(src.rss))
+      .then(r=>r.json())
+      .then(data=>{
+        if(data.status!=='ok') throw new Error('bad feed');
+        return (data.items||[]).map(it=>({
+          source:src.name, title:it.title, link:it.link,
+          desc:(it.description||'').replace(/<[^>]+>/g,'').slice(0,120),
+          pubDate:it.pubDate, cat:categorizeNews(it.title+' '+(it.description||''))
+        }));
+      })
+  ));
+  let items = [];
+  results.forEach((res, i)=>{
+    if(res.status==='fulfilled') items = items.concat(res.value);
+    else newsState.sourceErrors.push(NEWS_SOURCES[i].name);
+  });
+  items.sort((a,b)=> new Date(b.pubDate) - new Date(a.pubDate));
+  newsState.items = items;
+  newsState.loading = false;
+  newsState.lastFetched = new Date();
+}
+function newsCardHtml(it, catLabel, catClass){
+  const bookmarked = !!newsBookmarks[it.link];
+  return `
+    <div class="news-card" style="position:relative;">
+      <button class="news-star ${bookmarked?'on':''}" data-link="${it.link.replace(/"/g,'&quot;')}" title="${bookmarked?'즐겨찾기 해제':'즐겨찾기'}">${bookmarked?'★':'☆'}</button>
+      <a href="${it.link}" target="_blank" rel="noopener" style="text-decoration:none; color:inherit; display:block; padding-right:26px;">
+        <div class="news-meta-row">
+          <span class="news-badge ${catClass[it.cat]}">${catLabel[it.cat]}</span>
+          <span class="news-source">${it.source}</span>
+          <span class="news-time">· ${newsTimeAgo(it.pubDate)}</span>
+        </div>
+        <div class="news-title">${it.title}</div>
+        <div class="news-desc">${it.desc}</div>
+      </a>
+    </div>`;
+}
+function newsMatchesQuery(it, q){
+  if(!q) return true;
+  const hay = (it.title+' '+it.desc+' '+it.source).toLowerCase();
+  return hay.includes(q.toLowerCase());
+}
+function renderNews(){
+  const el = document.getElementById('screenNews');
 
-function renderHealthPage(){
-  const el = document.getElementById('screenHealth');
-  el.innerHTML = '';
+  const searchRow = `<div class="news-refresh-row" style="margin-bottom:10px;">
+    <input id="newsSearchInput" type="text" placeholder="제목, 내용, 언론사로 검색" value="${(newsQuery||'').replace(/"/g,'&quot;')}" style="flex:1; padding:8px 12px; border-radius:10px; border:1px solid var(--border); font-size:13.5px; background:#fafafa;">
+  </div>`;
 
-  const thisKey = currentMonthKey();
-  const lastKey = prevMonthKey();
-  const thisTotal = sumExerciseMinutes(thisKey);
-  const lastTotal = sumExerciseMinutes(lastKey);
-  const goal = settings.exerciseGoalMinutes || 600;
-  const pct = Math.min(100, Math.round(thisTotal/goal*100));
-  const diffPct = lastTotal>0 ? Math.round((thisTotal-lastTotal)/lastTotal*100) : (thisTotal>0?100:0);
-  const maxVal = Math.max(thisTotal, lastTotal, 1);
-
-  const goalCard = document.createElement('div'); goalCard.className='health-card';
-  goalCard.innerHTML = `
-    <div class="health-card-title">${monthLabel(thisKey)} 운동 목표</div>
-    <div class="health-goal-row">
-      <span class="health-goal-value">${thisTotal}<span class="health-goal-unit">분</span> <span class="health-goal-of">/ 목표 ${goal}분</span></span>
-      <button class="health-edit-goal" onclick="editExerciseGoal()">목표 수정</button>
+  const refreshRow = `<div class="news-refresh-row">
+    <span class="news-updated">${newsState.lastFetched ? '마지막 확인: '+newsTimeAgo(newsState.lastFetched) : ''}</span>
+    <div style="display:flex; gap:6px;">
+      <button onclick="newsShowBookmarksOnly=!newsShowBookmarksOnly; renderNews();" style="${newsShowBookmarksOnly?'background:var(--text); color:#fff; border-color:var(--text);':''}">★ 즐겨찾기</button>
+      <button onclick="fetchAllNews().then(renderNews)">새로고침</button>
     </div>
-    <div class="health-progress-bar"><div class="health-progress-fill" style="width:${pct}%;"></div></div>
-    <div class="health-progress-pct">${pct}% 달성</div>
-  `;
-  el.appendChild(goalCard);
+  </div>`;
 
-  const cmpCard = document.createElement('div'); cmpCard.className='health-card';
-  cmpCard.innerHTML = `
-    <div class="health-card-title">지난달과 비교</div>
-    <div class="health-cmp-row">
-      <span class="health-cmp-label">이번 달</span>
-      <div class="health-cmp-track"><div class="health-cmp-fill this" style="width:${thisTotal/maxVal*100}%;"></div></div>
-      <span class="health-cmp-value">${thisTotal}분</span>
-    </div>
-    <div class="health-cmp-row">
-      <span class="health-cmp-label">지난 달</span>
-      <div class="health-cmp-track"><div class="health-cmp-fill last" style="width:${lastTotal/maxVal*100}%;"></div></div>
-      <span class="health-cmp-value">${lastTotal}분</span>
-    </div>
-    <div class="health-cmp-diff ${diffPct>=0?'up':'down'}">${diffPct>=0?'▲':'▼'} 지난달보다 ${Math.abs(diffPct)}% ${diffPct>=0?'더 운동했어요':'적게 운동했어요'}</div>
-  `;
-  el.appendChild(cmpCard);
+  const linkRow = `<div class="news-cat-row" style="padding-top:0;">${NEWS_LINKS.map(l=>
+    `<a href="${l.url}" target="_blank" rel="noopener" class="news-cat-chip" style="text-decoration:none; display:inline-block;">${l.name} ↗</a>`
+  ).join('')}</div>`;
 
-  const addRow = document.createElement('div'); addRow.className='health-add-row';
-  const addExBtn = document.createElement('button'); addExBtn.className='health-add-btn'; addExBtn.textContent='+ 운동 기록 추가';
-  addExBtn.onclick = ()=> openExerciseSheet(null);
-  const addMealBtn = document.createElement('button'); addMealBtn.className='health-add-btn meal'; addMealBtn.textContent='+ 식사 기록 추가';
-  addMealBtn.onclick = ()=> openMealSheet(null);
-  addRow.appendChild(addExBtn); addRow.appendChild(addMealBtn);
-  el.appendChild(addRow);
+  el.innerHTML = searchRow + refreshRow + linkRow + `<div id="newsListBody"></div>`;
+  document.getElementById('newsSearchInput').addEventListener('input', e=>{
+    newsQuery = e.target.value;
+    renderNewsListBody();
+  });
 
-  // 운동기록 테이블
-  const exSection = document.createElement('div'); exSection.className='health-table-section';
-  const exTitle = document.createElement('div'); exTitle.className='health-card-title'; exTitle.textContent='운동기록';
-  exSection.appendChild(exTitle);
-  const sortedEx = exerciseLogs.slice().sort((a,b)=> (b['날짜']||'').localeCompare(a['날짜']||''));
-  if(sortedEx.length===0){
-    const e=document.createElement('div'); e.className='empty-mini'; e.textContent='운동기록이 없어요.';
-    exSection.appendChild(e);
-  } else {
-    const wrap = document.createElement('div'); wrap.className='health-table-wrap';
-    const table = document.createElement('table'); table.className='health-table';
-    table.innerHTML = '<thead><tr><th>날짜</th><th>시간</th><th>내용</th><th>체중</th><th></th></tr></thead>';
-    const tbody = document.createElement('tbody');
-    sortedEx.forEach(log=>{
-      const tr = document.createElement('tr');
-      const timeRange = (log['시작시간']&&log['종료시간']) ? (log['시작시간']+'~'+log['종료시간']) : (log['운동시간(분)']?log['운동시간(분)']+'분':'-');
-      const tdDate = document.createElement('td'); tdDate.textContent = compactDateLabel(log['날짜']);
-      const tdTime = document.createElement('td'); tdTime.textContent = timeRange;
-      const tdContent = document.createElement('td'); tdContent.textContent = log['운동내용']||'';
-      const tdWeight = document.createElement('td'); tdWeight.textContent = log['체중(kg)'] ? log['체중(kg)']+'kg' : '-';
-      const tdBtns = document.createElement('td'); tdBtns.className='health-row-btns';
-      const editBtn = document.createElement('button'); editBtn.className='health-row-btn'; editBtn.textContent='✎';
-      editBtn.onclick = ()=> openExerciseSheet(log.id);
-      const delBtn = document.createElement('button'); delBtn.className='health-row-btn'; delBtn.textContent='🗑';
-      delBtn.onclick = ()=> deleteExerciseEntry(log.id);
-      tdBtns.appendChild(editBtn); tdBtns.appendChild(delBtn);
-      tr.appendChild(tdDate); tr.appendChild(tdTime); tr.appendChild(tdContent); tr.appendChild(tdWeight); tr.appendChild(tdBtns);
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    wrap.appendChild(table);
-    exSection.appendChild(wrap);
+  if(newsState.loading && !newsShowBookmarksOnly){
+    document.getElementById('newsListBody').innerHTML = `<div class="empty">최신 기사를 불러오는 중...</div>`;
+    return;
   }
-  el.appendChild(exSection);
-
-  // 식사기록 테이블
-  const mealSection = document.createElement('div'); mealSection.className='health-table-section';
-  const mealTitle = document.createElement('div'); mealTitle.className='health-card-title'; mealTitle.textContent='식사기록';
-  mealSection.appendChild(mealTitle);
-  const sortedMeal = mealLogs.slice().sort((a,b)=> (b['날짜']||'').localeCompare(a['날짜']||''));
-  if(sortedMeal.length===0){
-    const e=document.createElement('div'); e.className='empty-mini'; e.textContent='식사기록이 없어요.';
-    mealSection.appendChild(e);
-  } else {
-    const wrap = document.createElement('div'); wrap.className='health-table-wrap';
-    const table = document.createElement('table'); table.className='health-table';
-    table.innerHTML = '<thead><tr><th>날짜</th><th>구분</th><th>음식</th><th>섭취량</th><th></th></tr></thead>';
-    const tbody = document.createElement('tbody');
-    sortedMeal.forEach(meal=>{
-      const tr = document.createElement('tr');
-      const tdDate = document.createElement('td'); tdDate.textContent = compactDateLabel(meal['날짜']);
-      const tdType = document.createElement('td'); tdType.innerHTML = `<span class="meal-type-badge">${meal['구분']||''}</span>`;
-      const tdFood = document.createElement('td'); tdFood.textContent = meal['음식']||'';
-      const tdAmount = document.createElement('td'); tdAmount.textContent = meal['섭취량']||'';
-      const tdBtns = document.createElement('td'); tdBtns.className='health-row-btns';
-      const editBtn = document.createElement('button'); editBtn.className='health-row-btn'; editBtn.textContent='✎';
-      editBtn.onclick = ()=> openMealSheet(meal.id);
-      const delBtn = document.createElement('button'); delBtn.className='health-row-btn'; delBtn.textContent='🗑';
-      delBtn.onclick = ()=> deleteMealEntry(meal.id);
-      tdBtns.appendChild(editBtn); tdBtns.appendChild(delBtn);
-      tr.appendChild(tdDate); tr.appendChild(tdType); tr.appendChild(tdFood); tr.appendChild(tdAmount); tr.appendChild(tdBtns);
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    wrap.appendChild(table);
-    mealSection.appendChild(wrap);
+  if(newsState.items.length===0 && newsState.lastFetched===null && !newsShowBookmarksOnly){
+    document.getElementById('newsListBody').innerHTML = `<div class="empty">불러오기를 시작합니다...</div>`;
+    fetchAllNews().then(renderNews);
+    return;
   }
-  el.appendChild(mealSection);
+  renderNewsListBody();
 }
+function renderNewsListBody(){
+  const bodyEl = document.getElementById('newsListBody');
+  if(!bodyEl) return;
+  const catLabel = {dev:'개발', plan:'도시계획', tax:'세금', etc:'기타'};
+  const catClass = {dev:'dev', plan:'plan', tax:'tax', etc:'etc'};
 
-let editingExerciseId = null;
-function openExerciseSheet(id){
-  editingExerciseId = id || null;
-  document.getElementById('exerciseSheetTitle').textContent = id ? '운동기록 수정' : '운동기록 추가';
-  document.getElementById('exDeleteBtn').style.display = id ? 'block' : 'none';
-  if(id){
-    const log = exerciseLogs.find(x=>x.id===id);
-    document.getElementById('ex-date').value = log['날짜'] || '';
-    document.getElementById('ex-start').value = log['시작시간'] || '';
-    document.getElementById('ex-end').value = log['종료시간'] || '';
-    document.getElementById('ex-content').value = log['운동내용'] || '';
-    document.getElementById('ex-weight').value = log['체중(kg)'] || '';
+  let list;
+  if(newsShowBookmarksOnly){
+    list = Object.values(newsBookmarks).filter(it=>newsMatchesQuery(it, newsQuery));
+    list.sort((a,b)=> new Date(b.pubDate) - new Date(a.pubDate));
+    if(list.length===0){
+      bodyEl.innerHTML = `<div class="empty">즐겨찾기에 담은 기사가 없어요. 기사 카드의 ☆를 눌러 담아두세요.</div>`;
+      return;
+    }
   } else {
-    document.getElementById('ex-date').value = todayStr();
-    document.getElementById('ex-start').value = '';
-    document.getElementById('ex-end').value = '';
-    document.getElementById('ex-content').value = '';
-    document.getElementById('ex-weight').value = '';
+    list = newsState.items.filter(it=>newsMatchesQuery(it, newsQuery));
+    if(list.length===0){
+      bodyEl.innerHTML = `<div class="empty">검색 결과가 없어요.</div>`;
+      return;
+    }
   }
-  document.getElementById('exerciseBackdrop').classList.add('open');
-}
-function closeExerciseSheet(){ document.getElementById('exerciseBackdrop').classList.remove('open'); }
 
-function saveExerciseEntry(){
-  const date = document.getElementById('ex-date').value;
-  const content = document.getElementById('ex-content').value.trim();
-  if(!date){ alert('날짜를 입력해주세요'); return; }
-  if(!content){ alert('운동내용을 입력해주세요'); return; }
-  const start = document.getElementById('ex-start').value || null;
-  const end = document.getElementById('ex-end').value || null;
-  const weight = document.getElementById('ex-weight').value.trim();
-
-  let log;
-  if(editingExerciseId){
-    log = exerciseLogs.find(x=>x.id===editingExerciseId);
-    log['날짜']=date; log['시작시간']=start; log['종료시간']=end; log['운동내용']=content;
-    log['체중(kg)'] = weight ? Number(weight) : null;
-    log['운동시간(분)'] = (start && end) ? calcMinutes_(start, end) : (log['운동시간(분)']||null);
-  } else {
-    log = {
-      id: uid(), '날짜':date, '시작시간':start, '종료시간':end,
-      '운동시간(분)': (start && end) ? calcMinutes_(start, end) : null,
-      '운동내용':content, '체중(kg)': weight ? Number(weight) : null
-    };
-    exerciseLogs.push(log);
+  let errNote = '';
+  if(!newsShowBookmarksOnly && newsState.sourceErrors.length){
+    errNote = `<div class="news-source-error">불러오지 못한 소스: ${newsState.sourceErrors.join(', ')}</div>`;
   }
-  persistExerciseLogs();
-  closeExerciseSheet();
-  renderHealthPage();
-  syncExerciseRemote(log);
+  bodyEl.innerHTML = list.map(it=>newsCardHtml(it, catLabel, catClass)).join('') + errNote;
 }
-function calcMinutes_(start, end){
-  const s = start.split(':').map(Number), e = end.split(':').map(Number);
-  let mins = (e[0]*60+e[1]) - (s[0]*60+s[1]);
-  if(mins<0) mins += 24*60;
-  return mins;
-}
-function deleteCurrentExercise(){
-  if(!editingExerciseId) return;
-  deleteExerciseEntry(editingExerciseId);
-  closeExerciseSheet();
-}
-function deleteExerciseEntry(id){
-  exerciseLogs = exerciseLogs.filter(x=>x.id!==id);
-  persistExerciseLogs();
-  renderHealthPage();
-  deleteExerciseRemote(id);
-}
-
-let editingMealId = null;
-let mealType = '아침';
-document.getElementById('mealTypeSeg').addEventListener('click', e=>{
-  const btn = e.target.closest('button'); if(!btn) return;
-  mealType = btn.dataset.v;
-  [...document.getElementById('mealTypeSeg').children].forEach(b=>b.classList.toggle('active', b.dataset.v===mealType));
+document.getElementById('screenNews').addEventListener('click', e=>{
+  const btn = e.target.closest('.news-star');
+  if(!btn) return;
+  e.preventDefault(); e.stopPropagation();
+  toggleNewsBookmark(btn.dataset.link);
 });
-function openMealSheet(id){
-  editingMealId = id || null;
-  document.getElementById('mealSheetTitle').textContent = id ? '식사기록 수정' : '식사기록 추가';
-  document.getElementById('mealDeleteBtn').style.display = id ? 'block' : 'none';
-  if(id){
-    const meal = mealLogs.find(x=>x.id===id);
-    document.getElementById('meal-date').value = meal['날짜'] || '';
-    mealType = meal['구분'] || '아침';
-    document.getElementById('meal-food').value = meal['음식'] || '';
-    document.getElementById('meal-amount').value = meal['섭취량'] || '';
-    document.getElementById('meal-memo').value = meal['메모'] || '';
-  } else {
-    document.getElementById('meal-date').value = todayStr();
-    mealType = '아침';
-    document.getElementById('meal-food').value = '';
-    document.getElementById('meal-amount').value = '';
-    document.getElementById('meal-memo').value = '';
-  }
-  [...document.getElementById('mealTypeSeg').children].forEach(b=>b.classList.toggle('active', b.dataset.v===mealType));
-  document.getElementById('mealBackdrop').classList.add('open');
-}
-function closeMealSheet(){ document.getElementById('mealBackdrop').classList.remove('open'); }
-
-function saveMealEntry(){
-  const date = document.getElementById('meal-date').value;
-  const food = document.getElementById('meal-food').value.trim();
-  if(!date){ alert('날짜를 입력해주세요'); return; }
-  if(!food){ alert('음식을 입력해주세요'); return; }
-  const amount = document.getElementById('meal-amount').value.trim();
-  const memo = document.getElementById('meal-memo').value.trim();
-
-  let meal;
-  if(editingMealId){
-    meal = mealLogs.find(x=>x.id===editingMealId);
-    meal['날짜']=date; meal['구분']=mealType; meal['음식']=food; meal['섭취량']=amount; meal['메모']=memo;
-  } else {
-    meal = {id: uid(), '날짜':date, '구분':mealType, '음식':food, '섭취량':amount, '메모':memo};
-    mealLogs.push(meal);
-  }
-  persistMealLogs();
-  closeMealSheet();
-  renderHealthPage();
-  syncMealRemote(meal);
-}
-function deleteCurrentMeal(){
-  if(!editingMealId) return;
-  deleteMealEntry(editingMealId);
-  closeMealSheet();
-}
-function deleteMealEntry(id){
-  mealLogs = mealLogs.filter(x=>x.id!==id);
-  persistMealLogs();
-  renderHealthPage();
-  deleteMealRemote(id);
-}
 
 /* ---------------- master render ---------------- */
 function renderAll(){
@@ -2358,8 +2105,8 @@ function renderAll(){
   document.getElementById('screenFavorites').hidden = currentTab!=='favorites';
   document.getElementById('screenSettings').hidden = currentTab!=='settings';
   document.getElementById('screenRecurring').hidden = currentTab!=='recurring';
-  document.getElementById('screenHealth').hidden = currentTab!=='health';
-  document.getElementById('chips').hidden = (currentTab==='settings' || currentTab==='recurring' || currentTab==='favorites' || currentTab==='health');
+  document.getElementById('screenNews').hidden = currentTab!=='news';
+  document.getElementById('chips').hidden = (currentTab==='settings' || currentTab==='recurring' || currentTab==='favorites' || currentTab==='news');
 
   if(currentTab==='home') renderHome();
   else if(currentTab==='schedule') renderSchedule();
@@ -2367,9 +2114,9 @@ function renderAll(){
   else if(currentTab==='favorites') renderFavorites();
   else if(currentTab==='settings') renderSettings();
   else if(currentTab==='recurring') renderRecurringPage();
-  else if(currentTab==='health') renderHealthPage();
+  else if(currentTab==='news') renderNews();
 
-  const navTab = (currentTab==='recurring' || currentTab==='health') ? 'settings' : currentTab;
+  const navTab = currentTab==='recurring' ? 'settings' : currentTab;
   [...document.getElementById('bottomNav').children].forEach(b=>{
     b.classList.toggle('active', b.dataset.tab===navTab);
   });
