@@ -2047,13 +2047,25 @@ function populatePersonSelect(selectedId){
   sel.value = selectedId || '';
 }
 
+/** 날짜 입력값이 (모바일 브라우저 등에서) 전체 타임스탬프 형태로 와도 날짜 부분만 정확히 뽑아냄 */
+function normalizeDateStr(v){
+  if(!v) return null;
+  const m = String(v).match(/(\d{4}-\d{2}-\d{2})/);
+  return m ? m[1] : v;
+}
+function normalizeTimeStr(v){
+  if(!v) return null;
+  const m = String(v).match(/(\d{2}:\d{2})/);
+  return m ? m[1] : v;
+}
+
 function saveItem(){
   const title = document.getElementById('f-title').value.trim();
   if(!title){ alert('제목을 입력해주세요'); return; }
-  const startDate = document.getElementById('f-startDate').value || null;
-  const startTime = document.getElementById('f-startTime').value || null;
-  const endDate = document.getElementById('f-endDate').value || startDate;
-  const endTime = document.getElementById('f-endTime').value || null;
+  const startDate = normalizeDateStr(document.getElementById('f-startDate').value) || null;
+  const startTime = normalizeTimeStr(document.getElementById('f-startTime').value) || null;
+  const endDate = normalizeDateStr(document.getElementById('f-endDate').value) || startDate;
+  const endTime = normalizeTimeStr(document.getElementById('f-endTime').value) || null;
   const memo = document.getElementById('f-memo').value.trim();
   const person = (f_cal==='personal' && f_type==='todo') ? (document.getElementById('f-person').value || null) : null;
   let savedItem;
@@ -2280,12 +2292,12 @@ function openExerciseSheet(id){
 function closeExerciseSheet(){ document.getElementById('exerciseBackdrop').classList.remove('open'); }
 
 function saveExerciseEntry(){
-  const date = document.getElementById('ex-date').value;
+  const date = normalizeDateStr(document.getElementById('ex-date').value);
   const content = document.getElementById('ex-content').value.trim();
   if(!date){ alert('날짜를 입력해주세요'); return; }
   if(!content){ alert('운동내용을 입력해주세요'); return; }
-  const start = document.getElementById('ex-start').value || null;
-  const end = document.getElementById('ex-end').value || null;
+  const start = normalizeTimeStr(document.getElementById('ex-start').value);
+  const end = normalizeTimeStr(document.getElementById('ex-end').value);
   const weight = document.getElementById('ex-weight').value.trim();
 
   let log;
@@ -2356,7 +2368,7 @@ function openMealSheet(id){
 function closeMealSheet(){ document.getElementById('mealBackdrop').classList.remove('open'); }
 
 function saveMealEntry(){
-  const date = document.getElementById('meal-date').value;
+  const date = normalizeDateStr(document.getElementById('meal-date').value);
   const food = document.getElementById('meal-food').value.trim();
   if(!date){ alert('날짜를 입력해주세요'); return; }
   if(!food){ alert('음식을 입력해주세요'); return; }
