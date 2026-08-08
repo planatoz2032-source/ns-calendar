@@ -275,6 +275,7 @@
   .health-add-row{display:flex; gap:8px; margin-bottom:14px;}
   .health-add-btn{flex:1; background:#eefaf3; color:#0f8a5f; border:1px solid #cdeedd; border-radius:10px; padding:10px; font-size:13px; font-weight:600; cursor:pointer;}
   .health-add-btn.meal{background:#fff4ea; color:#b6650a; border-color:#f3e0c4;}
+  .health-add-btn.sleep{background:#eef1fd; color:#4f5fd6; border-color:#d8ddf7;}
   .health-table-section{margin-bottom:16px;}
   .health-table-wrap{overflow-x:auto; border:1px solid var(--border); border-radius:10px;}
   .health-table{width:100%; border-collapse:collapse; font-size:12px; white-space:nowrap;}
@@ -535,6 +536,37 @@
   </div>
 </div>
 
+<!-- 수면기록 추가/수정 -->
+<div class="sheet-backdrop" id="sleepBackdrop">
+  <div class="sheet">
+    <h2 id="sleepSheetTitle">수면기록 추가</h2>
+    <div class="field">
+      <label>날짜 (기상한 날 기준)</label>
+      <input type="date" id="sleep-date">
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>취침시간</label>
+        <input type="time" id="sleep-bed">
+      </div>
+      <div class="field">
+        <label>기상시간</label>
+        <input type="time" id="sleep-wake">
+      </div>
+    </div>
+    <div class="field">
+      <label>메모 (선택)</label>
+      <input type="text" id="sleep-memo" placeholder="예: 자주 깼음">
+    </div>
+    <div class="settings-note">취침·기상시간을 입력하면 수면시간이 자동으로 계산돼요 (자정을 넘겨도 정확히 계산돼요).</div>
+    <div class="sheet-actions">
+      <button class="btn-ghost" onclick="closeSleepSheet()">취소</button>
+      <button class="btn-danger" id="sleepDeleteBtn" style="display:none;" onclick="deleteCurrentSleep()">삭제</button>
+      <button class="btn-primary" onclick="saveSleepEntry()">저장</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const STORAGE_KEY = 'ns_dashboard_items_v2';
 const SETTINGS_KEY = 'ns_dashboard_settings_v1';
@@ -579,6 +611,10 @@ function persistExerciseLogs(){ localStorage.setItem(EXERCISE_KEY, JSON.stringif
 const MEAL_KEY = 'ns_meal_logs_v1';
 let mealLogs = JSON.parse(localStorage.getItem(MEAL_KEY) || '[]');
 function persistMealLogs(){ localStorage.setItem(MEAL_KEY, JSON.stringify(mealLogs)); }
+
+const SLEEP_KEY = 'ns_sleep_logs_v1';
+let sleepLogs = JSON.parse(localStorage.getItem(SLEEP_KEY) || '[]');
+function persistSleepLogs(){ localStorage.setItem(SLEEP_KEY, JSON.stringify(sleepLogs)); }
 
 if(!settings.exerciseGoalMinutes) settings.exerciseGoalMinutes = 600; // 월 목표(분), 기본 10시간
 
@@ -688,6 +724,8 @@ async function apiSaveExercise(log){ return (await apiPost({action:'saveExercise
 async function apiDeleteExercise(id){ return apiPost({action:'deleteExercise', id}); }
 async function apiSaveMeal(meal){ return (await apiPost({action:'saveMeal', meal})).meal; }
 async function apiDeleteMeal(id){ return apiPost({action:'deleteMeal', id}); }
+async function apiSaveSleep(log){ return (await apiPost({action:'saveSleep', log})).log; }
+async function apiDeleteSleep(id){ return apiPost({action:'deleteSleep', id}); }
 
 let syncStatus = 'idle'; // idle | syncing | error
 let syncErrorMsg = '';
@@ -761,6 +799,21 @@ function deleteMealRemote(id){
     alert('⚠️ 식사기록 삭제가 서버에는 반영되지 않았어요.\n오류: '+e.message);
   });
 }
+function syncSleepRemote(log){
+  if(!apiReady()) return;
+  apiSaveSleep(log).then(saved=>{ Object.assign(log, saved); persistSleepLogs(); })
+  .catch(e=>{
+    console.error('수면기록 저장 동기화 실패', e);
+    alert('⚠️ 수면기록이 서버(구글시트)에 저장되지 않았어요.\n오류: '+e.message);
+  });
+}
+function deleteSleepRemote(id){
+  if(!apiReady()) return;
+  apiDeleteSleep(id).catch(e=>{
+    console.error('수면기록 삭제 동기화 실패', e);
+    alert('⚠️ 수면기록 삭제가 서버에는 반영되지 않았어요.\n오류: '+e.message);
+  });
+}
 
 /** 페이지 로드 시 서버의 최신 데이터로 새로고침 (여러 기기 간 동기화의 핵심) */
 async function refreshFromServer(manual){
@@ -785,7 +838,8 @@ async function refreshFromServer(manual){
     recurringTemplates = data.recurring;
     exerciseLogs = data.exerciseLogs || [];
     mealLogs = data.mealLogs || [];
-    saveAll(); persistRecurring(); persistExerciseLogs(); persistMealLogs();
+    sleepLogs = data.sleepLogs || [];
+    saveAll(); persistRecurring(); persistExerciseLogs(); persistMealLogs(); persistSleepLogs();
     syncStatus = 'idle';
     renderAll();
     if(manual) alert('동기화 완료 (항목 '+items.length+'개)');
@@ -807,6 +861,7 @@ async function uploadAllLocalToServer(){
   const failedItems = [];
   const failedExercise = [];
   const failedMeals = [];
+  const failedSleep = [];
 
   for(const t of recurringTemplates){
     try{ await apiSaveRecurring(t); }
@@ -833,10 +888,15 @@ async function uploadAllLocalToServer(){
     catch(e){ console.error('식사기록 업로드 실패', meal['음식'], e); failedMeals.push(meal['음식']||meal['날짜']); }
     await sleep(250);
   }
+  for(const log of sleepLogs){
+    try{ const saved = await apiSaveSleep(log); Object.assign(log, saved); }
+    catch(e){ console.error('수면기록 업로드 실패', log['날짜'], e); failedSleep.push(log['날짜']); }
+    await sleep(250);
+  }
 
-  saveAll(); persistRecurring(); persistExerciseLogs(); persistMealLogs();
+  saveAll(); persistRecurring(); persistExerciseLogs(); persistMealLogs(); persistSleepLogs();
 
-  const totalFailed = failedRecurring.length+failedItems.length+failedExercise.length+failedMeals.length;
+  const totalFailed = failedRecurring.length+failedItems.length+failedExercise.length+failedMeals.length+failedSleep.length;
   if(totalFailed===0){
     syncStatus = 'idle';
     alert('업로드 완료! 구글시트에서 확인해보세요.');
@@ -849,6 +909,7 @@ async function uploadAllLocalToServer(){
       (failedItems.length ? '항목 실패: '+failedItems.join(', ')+'\n' : '')+
       (failedExercise.length ? '운동기록 실패: '+failedExercise.join(', ')+'\n' : '')+
       (failedMeals.length ? '식사기록 실패: '+failedMeals.join(', ')+'\n' : '')+
+      (failedSleep.length ? '수면기록 실패: '+failedSleep.join(', ')+'\n' : '')+
       '\n"이 기기의 로컬 데이터를 서버로 올리기"를 한 번 더 눌러서 재시도해보세요.'
     );
   }
@@ -2137,6 +2198,15 @@ function sumExerciseMinutes(mKey){
   return exerciseLogs.filter(l=> monthKeyOf(l['날짜'])===mKey)
     .reduce((s,l)=> s + (Number(l['운동시간(분)'])||0), 0);
 }
+function avgSleepMinutes(mKey){
+  const list = sleepLogs.filter(l=> monthKeyOf(l['날짜'])===mKey && Number(l['수면시간(분)']));
+  if(list.length===0) return 0;
+  return Math.round(list.reduce((s,l)=> s + Number(l['수면시간(분)']), 0) / list.length);
+}
+function fmtHoursMinutes(mins){
+  const h = Math.floor(mins/60), m = mins%60;
+  return h+'시간'+(m>0?' '+m+'분':'');
+}
 
 function editExerciseGoal(){
   const v = prompt('이번 달 운동 목표(분)를 입력해주세요\n예: 600 (하루 20분 x 30일)', settings.exerciseGoalMinutes||600);
@@ -2189,6 +2259,18 @@ function renderHealthPage(){
     <div class="health-cmp-diff ${diffPct>=0?'up':'down'}">${diffPct>=0?'▲':'▼'} 지난달보다 ${Math.abs(diffPct)}% ${diffPct>=0?'더 운동했어요':'적게 운동했어요'}</div>
   `;
   el.appendChild(cmpCard);
+
+  const avgSleep = avgSleepMinutes(thisKey);
+  const sleepCard = document.createElement('div'); sleepCard.className='health-card';
+  const sleepQualityColor = avgSleep===0 ? 'var(--sub)' : (avgSleep>=420 ? '#0f8a5f' : (avgSleep>=360 ? '#b6650a' : '#d84343'));
+  sleepCard.innerHTML = `
+    <div class="health-card-title">${monthLabel(thisKey)} 평균 수면시간</div>
+    <div class="health-goal-row" style="margin-bottom:0;">
+      <span class="health-goal-value" style="color:${sleepQualityColor};">${avgSleep>0 ? fmtHoursMinutes(avgSleep) : '기록 없음'}</span>
+      <button class="health-add-btn sleep" style="flex:0 0 auto; padding:8px 12px;" onclick="openSleepSheet(null)">+ 수면 기록</button>
+    </div>
+  `;
+  el.appendChild(sleepCard);
 
   const addRow = document.createElement('div'); addRow.className='health-add-row';
   const addExBtn = document.createElement('button'); addExBtn.className='health-add-btn'; addExBtn.textContent='+ 운동 기록 추가';
@@ -2266,6 +2348,100 @@ function renderHealthPage(){
     mealSection.appendChild(wrap);
   }
   el.appendChild(mealSection);
+
+  // 수면기록 테이블
+  const sleepSection = document.createElement('div'); sleepSection.className='health-table-section';
+  const sleepTitle = document.createElement('div'); sleepTitle.className='health-card-title'; sleepTitle.textContent='수면기록';
+  sleepSection.appendChild(sleepTitle);
+  const sortedSleep = sleepLogs.slice().sort((a,b)=> (b['날짜']||'').localeCompare(a['날짜']||''));
+  if(sortedSleep.length===0){
+    const e=document.createElement('div'); e.className='empty-mini'; e.textContent='수면기록이 없어요.';
+    sleepSection.appendChild(e);
+  } else {
+    const wrap = document.createElement('div'); wrap.className='health-table-wrap';
+    const table = document.createElement('table'); table.className='health-table';
+    table.innerHTML = '<thead><tr><th>날짜</th><th>취침~기상</th><th>수면시간</th><th></th></tr></thead>';
+    const tbody = document.createElement('tbody');
+    sortedSleep.forEach(log=>{
+      const tr = document.createElement('tr');
+      const tdDate = document.createElement('td'); tdDate.textContent = compactDateLabel(log['날짜']);
+      const tdRange = document.createElement('td'); tdRange.textContent = (log['취침시간']&&log['기상시간']) ? (log['취침시간']+'~'+log['기상시간']) : '-';
+      const tdMins = document.createElement('td'); tdMins.textContent = log['수면시간(분)'] ? fmtHoursMinutes(Number(log['수면시간(분)'])) : '-';
+      const tdBtns = document.createElement('td'); tdBtns.className='health-row-btns';
+      const editBtn = document.createElement('button'); editBtn.className='health-row-btn'; editBtn.textContent='✎';
+      editBtn.onclick = ()=> openSleepSheet(log.id);
+      const delBtn = document.createElement('button'); delBtn.className='health-row-btn'; delBtn.textContent='🗑';
+      delBtn.onclick = ()=> deleteSleepEntry(log.id);
+      tdBtns.appendChild(editBtn); tdBtns.appendChild(delBtn);
+      tr.appendChild(tdDate); tr.appendChild(tdRange); tr.appendChild(tdMins); tr.appendChild(tdBtns);
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    sleepSection.appendChild(wrap);
+  }
+  el.appendChild(sleepSection);
+}
+
+let editingSleepId = null;
+function openSleepSheet(id){
+  editingSleepId = id || null;
+  document.getElementById('sleepSheetTitle').textContent = id ? '수면기록 수정' : '수면기록 추가';
+  document.getElementById('sleepDeleteBtn').style.display = id ? 'block' : 'none';
+  if(id){
+    const log = sleepLogs.find(x=>x.id===id);
+    document.getElementById('sleep-date').value = log['날짜'] || '';
+    document.getElementById('sleep-bed').value = log['취침시간'] || '';
+    document.getElementById('sleep-wake').value = log['기상시간'] || '';
+    document.getElementById('sleep-memo').value = log['메모'] || '';
+  } else {
+    document.getElementById('sleep-date').value = todayStr();
+    document.getElementById('sleep-bed').value = '';
+    document.getElementById('sleep-wake').value = '';
+    document.getElementById('sleep-memo').value = '';
+  }
+  document.getElementById('sleepBackdrop').classList.add('open');
+}
+function closeSleepSheet(){ document.getElementById('sleepBackdrop').classList.remove('open'); }
+
+function saveSleepEntry(){
+  const date = normalizeDateStr(document.getElementById('sleep-date').value);
+  if(!date){ alert('날짜를 입력해주세요'); return; }
+  const bed = normalizeTimeStr(document.getElementById('sleep-bed').value);
+  const wake = normalizeTimeStr(document.getElementById('sleep-wake').value);
+  const memo = document.getElementById('sleep-memo').value.trim();
+  if(!bed || !wake){ alert('취침시간과 기상시간을 입력해주세요'); return; }
+
+  let log;
+  const mins = calcSleepMinutes_(bed, wake);
+  if(editingSleepId){
+    log = sleepLogs.find(x=>x.id===editingSleepId);
+    log['날짜']=date; log['취침시간']=bed; log['기상시간']=wake; log['수면시간(분)']=mins; log['메모']=memo;
+  } else {
+    log = {id: uid(), '날짜':date, '취침시간':bed, '기상시간':wake, '수면시간(분)':mins, '메모':memo};
+    sleepLogs.push(log);
+  }
+  persistSleepLogs();
+  closeSleepSheet();
+  renderHealthPage();
+  syncSleepRemote(log);
+}
+function calcSleepMinutes_(bed, wake){
+  const b = bed.split(':').map(Number), w = wake.split(':').map(Number);
+  let mins = (w[0]*60+w[1]) - (b[0]*60+b[1]);
+  if(mins<=0) mins += 24*60; // 자정을 넘겨 자는 경우
+  return mins;
+}
+function deleteCurrentSleep(){
+  if(!editingSleepId) return;
+  deleteSleepEntry(editingSleepId);
+  closeSleepSheet();
+}
+function deleteSleepEntry(id){
+  sleepLogs = sleepLogs.filter(x=>x.id!==id);
+  persistSleepLogs();
+  renderHealthPage();
+  deleteSleepRemote(id);
 }
 
 let editingExerciseId = null;
