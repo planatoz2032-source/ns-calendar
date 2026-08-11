@@ -541,7 +541,7 @@
   <div class="sheet">
     <h2 id="sleepSheetTitle">수면기록 추가</h2>
     <div class="field">
-      <label>날짜 (기상한 날 기준)</label>
+      <label>날짜 (취침한 날 기준)</label>
       <input type="date" id="sleep-date">
     </div>
     <div class="row2">
@@ -640,7 +640,7 @@ function weekdayKr(dateStr){ return ['일','월','화','수','목','금','토'][
 
 /** 같은 제목으로 여러 날짜에 걸쳐 있는 개인 일정에서 "매달 며칠" 또는 "매주 무슨 요일" 패턴을 감지 */
 function detectRecurrencePattern(dateStrs){
-  if(dateStrs.length < 2) return null;
+  if(dateStrs.length < 1) return null;
   const days = dateStrs.map(d=>parseDate(d).getDate());
   const weekdays = dateStrs.map(d=>parseDate(d).getDay());
   const allSameDay = days.every(d=>d===days[0]);
@@ -801,7 +801,10 @@ function deleteMealRemote(id){
 }
 function syncSleepRemote(log){
   if(!apiReady()) return;
-  apiSaveSleep(log).then(saved=>{ Object.assign(log, saved); persistSleepLogs(); })
+  apiSaveSleep(log).then(saved=>{
+    Object.assign(log, saved); persistSleepLogs();
+    if(currentTab==='health') renderHealthPage();
+  })
   .catch(e=>{
     console.error('수면기록 저장 동기화 실패', e);
     alert('⚠️ 수면기록이 서버(구글시트)에 저장되지 않았어요.\n오류: '+e.message);
@@ -839,6 +842,17 @@ async function refreshFromServer(manual){
     exerciseLogs = data.exerciseLogs || [];
     mealLogs = data.mealLogs || [];
     sleepLogs = data.sleepLogs || [];
+    if(data.newsBookmarks){
+      // 서버에 "즐겨찾기중"으로 남아있는 것만 이 기기의 활성 즐겨찾기로 복원 (다른 기기와 상태 맞춤)
+      const activeFromServer = {};
+      data.newsBookmarks.forEach(n=>{
+        if(n['상태']==='즐겨찾기중' && n['링크']){
+          activeFromServer[n['링크']] = { id:n.id, title:n['제목'], link:n['링크'], source:n['출처'], 담은날짜:n['담은날짜'], 해제날짜:null, 상태:'즐겨찾기중' };
+        }
+      });
+      newsBookmarks = activeFromServer;
+      saveNewsBookmarks();
+    }
     saveAll(); persistRecurring(); persistExerciseLogs(); persistMealLogs(); persistSleepLogs();
     syncStatus = 'idle';
     renderAll();
@@ -2199,9 +2213,10 @@ function sumExerciseMinutes(mKey){
     .reduce((s,l)=> s + (Number(l['운동시간(분)'])||0), 0);
 }
 function avgSleepMinutes(mKey){
-  const list = sleepLogs.filter(l=> monthKeyOf(l['날짜'])===mKey && Number(l['수면시간(분)']));
+  const list = sleepLogs.filter(l=> monthKeyOf(l['날짜'])===mKey && Number(l['수면시간']));
   if(list.length===0) return 0;
-  return Math.round(list.reduce((s,l)=> s + Number(l['수면시간(분)']), 0) / list.length);
+  const avgHours = list.reduce((s,l)=> s + Number(l['수면시간']), 0) / list.length;
+  return Math.round(avgHours*60);
 }
 function fmtHoursMinutes(mins){
   const h = Math.floor(mins/60), m = mins%60;
@@ -2366,7 +2381,7 @@ function renderHealthPage(){
       const tr = document.createElement('tr');
       const tdDate = document.createElement('td'); tdDate.textContent = compactDateLabel(log['날짜']);
       const tdRange = document.createElement('td'); tdRange.textContent = (log['취침시간']&&log['기상시간']) ? (log['취침시간']+'~'+log['기상시간']) : '-';
-      const tdMins = document.createElement('td'); tdMins.textContent = log['수면시간(분)'] ? fmtHoursMinutes(Number(log['수면시간(분)'])) : '-';
+      const tdMins = document.createElement('td'); tdMins.textContent = log['수면시간'] ? fmtHoursMinutes(Math.round(Number(log['수면시간'])*60)) : '-';
       const tdBtns = document.createElement('td'); tdBtns.className='health-row-btns';
       const editBtn = document.createElement('button'); editBtn.className='health-row-btn'; editBtn.textContent='✎';
       editBtn.onclick = ()=> openSleepSheet(log.id);
@@ -2395,7 +2410,7 @@ function openSleepSheet(id){
     document.getElementById('sleep-wake').value = log['기상시간'] || '';
     document.getElementById('sleep-memo').value = log['메모'] || '';
   } else {
-    document.getElementById('sleep-date').value = todayStr();
+    document.getElementById('sleep-date').value = addDays(todayStr(), -1); // 보통 아침에 기록하므로 기본값은 "어제(취침한 날)"
     document.getElementById('sleep-bed').value = '';
     document.getElementById('sleep-wake').value = '';
     document.getElementById('sleep-memo').value = '';
@@ -2413,12 +2428,12 @@ function saveSleepEntry(){
   if(!bed || !wake){ alert('취침시간과 기상시간을 입력해주세요'); return; }
 
   let log;
-  const mins = calcSleepMinutes_(bed, wake);
+  const hours = calcSleepHours_(bed, wake); // 서버가 시트 수식으로 다시 정확히 계산해서 덮어씀 (여긴 화면에 즉시 보여주기 위한 값)
   if(editingSleepId){
     log = sleepLogs.find(x=>x.id===editingSleepId);
-    log['날짜']=date; log['취침시간']=bed; log['기상시간']=wake; log['수면시간(분)']=mins; log['메모']=memo;
+    log['날짜']=date; log['취침시간']=bed; log['기상시간']=wake; log['수면시간']=hours; log['메모']=memo;
   } else {
-    log = {id: uid(), '날짜':date, '취침시간':bed, '기상시간':wake, '수면시간(분)':mins, '메모':memo};
+    log = {id: uid(), '날짜':date, '취침시간':bed, '기상시간':wake, '수면시간':hours, '메모':memo};
     sleepLogs.push(log);
   }
   persistSleepLogs();
@@ -2426,11 +2441,11 @@ function saveSleepEntry(){
   renderHealthPage();
   syncSleepRemote(log);
 }
-function calcSleepMinutes_(bed, wake){
+function calcSleepHours_(bed, wake){
   const b = bed.split(':').map(Number), w = wake.split(':').map(Number);
   let mins = (w[0]*60+w[1]) - (b[0]*60+b[1]);
   if(mins<=0) mins += 24*60; // 자정을 넘겨 자는 경우
-  return mins;
+  return Math.round((mins/60)*100)/100; // 시간 단위, 소수 둘째자리
 }
 function deleteCurrentSleep(){
   if(!editingSleepId) return;
@@ -2606,13 +2621,37 @@ let newsState = { loading:false, items:[], sourceErrors:[], lastFetched:null };
 let newsBookmarks = JSON.parse(localStorage.getItem(NEWS_BOOKMARK_KEY) || '{}');
 function saveNewsBookmarks(){ localStorage.setItem(NEWS_BOOKMARK_KEY, JSON.stringify(newsBookmarks)); }
 function toggleNewsBookmark(link){
-  if(newsBookmarks[link]) delete newsBookmarks[link];
-  else {
+  if(newsBookmarks[link]){
+    // 즐겨찾기 해제: 기록에서 완전히 지우지 않고, 서버에는 "읽음"으로 상태만 남겨서 이력을 보존함
+    const removed = newsBookmarks[link];
+    delete newsBookmarks[link];
+    saveNewsBookmarks();
+    syncNewsBookmarkRemote(Object.assign({}, removed, {상태:'읽음', 해제날짜: todayStr()}));
+  } else {
     const it = newsState.items.find(x=>x.link===link) || Object.values(newsBookmarks).find(x=>x.link===link);
-    if(it) newsBookmarks[link] = it;
+    if(it){
+      const bookmark = { id: it.id || newsLinkToId_(link), title: it.title, link: it.link, source: it.source,
+        담은날짜: todayStr(), 해제날짜: null, 상태:'즐겨찾기중' };
+      newsBookmarks[link] = Object.assign({}, it, bookmark);
+      saveNewsBookmarks();
+      syncNewsBookmarkRemote(bookmark);
+    }
   }
-  saveNewsBookmarks();
   renderNews();
+}
+function newsLinkToId_(link){
+  // 링크 기준으로 고정된 id를 만들어서, 같은 기사를 다시 즐겨찾기해도 같은 시트 행을 재사용함
+  let hash = 0;
+  for(let i=0;i<link.length;i++){ hash = ((hash<<5)-hash+link.charCodeAt(i))|0; }
+  return 'news' + Math.abs(hash);
+}
+function syncNewsBookmarkRemote(item){
+  if(!apiReady()) return;
+  const payload = { id: item.id, 제목: item.title, 링크: item.link, 출처: item.source,
+    담은날짜: item.담은날짜||null, 해제날짜: item.해제날짜||null, 상태: item.상태||'즐겨찾기중' };
+  apiPost({action:'saveNewsBookmark', item: payload}).catch(e=>{
+    console.error('관심뉴스 동기화 실패', e);
+  });
 }
 
 function categorizeNews(text){
