@@ -63,11 +63,14 @@
   .cal-cell{aspect-ratio:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; border-radius:10px; cursor:pointer; font-size:13px; color:var(--text); position:relative;}
   .cal-cell.summary-mode{aspect-ratio:auto; min-height:56px; justify-content:flex-start; padding:3px 2px; border-radius:8px; gap:1px;}
   .cal-cell.otherMonth{color:#d0d3da;}
-  .cal-cell.selected{background:var(--text); color:#fff;}
-  .cal-cell.today:not(.selected){border:1.5px solid var(--text);}
+  .cal-cell.selected:not(.today){background:#eef1f6;}
+  .cal-cell.today{border:1.5px solid var(--text); border-radius:10px;}
+  .cal-cell.today.summary-mode{border-radius:8px;}
   .cal-dots{display:flex; gap:2px; position:absolute; bottom:3px;}
   .cal-summary{display:flex; flex-direction:column; gap:1px; width:100%; align-items:stretch;}
-  .cal-summary-chip{font-size:8.5px; line-height:1.25; color:#fff; border-radius:3px; padding:0 2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%;}
+  .cal-summary-chip{font-size:8.5px; line-height:1.25; border-radius:3px; padding:0 2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; font-weight:600;}
+  .cal-summary-chip.work{background:#dbeafe; color:#1e40af;}
+  .cal-summary-chip.personal{background:#d1fae5; color:#065f46;}
   .cal-summary-more{font-size:8px; color:var(--sub); padding-left:2px;}
   .cal-dot{width:5px; height:5px; border-radius:50%;}
   .cal-legend{display:flex; gap:14px; justify-content:center; font-size:11px; color:var(--sub); margin-top:8px;}
@@ -102,8 +105,9 @@
   .hsec-date-group{font-size:13px; font-weight:700; color:var(--text); margin:10px 2px 4px;}
   .hsec-date-group:first-child{margin-top:2px;}
   .hsec-main{flex:1; min-width:0;}
-  .hsec-line{font-size:13.5px; color:var(--text); word-break:break-word;}
-  .recurring-badge{display:inline-block; font-size:10px; font-weight:700; color:#b6650a; background:#fdf1e2; border-radius:5px; padding:1px 5px; margin-right:5px; vertical-align:middle;}
+  .hsec-line{font-size:13.5px; color:var(--text); word-break:break-word; display:flex; align-items:baseline; justify-content:space-between; gap:6px;}
+  .hsec-line .hsec-line-title{flex:1; min-width:0;}
+  .recurring-badge{display:inline-block; font-size:10px; font-weight:700; color:#b6650a; background:#fdf1e2; border-radius:5px; padding:1px 5px; vertical-align:middle; flex:0 0 auto;}
   .hsec-row.is-done .hsec-line{text-decoration:line-through; color:var(--done);}
   .hsec-row.is-done{opacity:0.75;}
   .hsec-memo{font-size:11.5px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:2px;}
@@ -310,7 +314,6 @@
 <main class="screen" id="screenHome"></main>
 <main class="screen" id="screenSchedule" hidden></main>
 <main class="screen" id="screenTodo" hidden></main>
-<main class="screen" id="screenFavorites" hidden></main>
 <main class="screen" id="screenSettings" hidden></main>
 <main class="screen" id="screenRecurring" hidden></main>
 <main class="screen" id="screenNews" hidden></main>
@@ -322,7 +325,6 @@
   <button data-tab="home"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg></span><span>홈</span></button>
   <button data-tab="schedule"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 11h16"/></svg></span><span>일정</span></button>
   <button data-tab="todo"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 5.5l1.5 1.5l2.5 -2.5"/><path d="M3.5 11.5l1.5 1.5l2.5 -2.5"/><path d="M3.5 17.5l1.5 1.5l2.5 -2.5"/><path d="M11 6l9 0"/><path d="M11 12l9 0"/><path d="M11 18l9 0"/></svg></span><span>할일</span></button>
-  <button data-tab="favorites"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1.002l3.086 -6.253l3.086 6.253l6.9 1.002l-5 4.867l1.179 6.873z"/></svg></span><span>즐겨찾기</span></button>
   <button data-tab="settings"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg></span><span>설정</span></button>
   <button data-tab="news"><span class="navicon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11a2 2 0 0 1 2 2v13a2.5 2.5 0 0 1 -2.5 2.5h-11.5a2 2 0 0 1 -2 -2v-13a2 2 0 0 1 2 -2z"/><path d="M18 8h2a1 1 0 0 1 1 1v10a1.5 1.5 0 0 1 -3 0"/><path d="M8 8h5"/><path d="M8 12h5"/><path d="M8 16h3"/></svg></span><span>부동산뉴스</span></button>
   <button data-tab="health"><span class="navicon" style="font-size:17px;">💪</span><span>건강</span></button>
@@ -959,7 +961,7 @@ function renderHeader(){
         <h1><button class="back-btn" onclick="currentTab='settings'; renderAll();">‹</button>🔁 정기 할일 관리</h1>
       </div>`;
   } else {
-    const titles = {home:'📅 NS Planner', todo:'☑️ 할일', favorites:'⭐ 즐겨찾기', settings:'⚙️ 설정', news:'🏠 부동산 뉴스', health:'💪 건강 프로젝트'};
+    const titles = {home:'📅 NS Planner', todo:'☑️ 할일', settings:'⚙️ 설정', news:'🏠 부동산 뉴스', health:'💪 건강 프로젝트'};
     const icons = currentTab==='home'
       ? `<span class="header-icons">
            <button class="header-icon-btn" onclick="openSearch()" title="검색">🔍</button>
@@ -1179,11 +1181,12 @@ function buildHomeRow(it, {leftLabel, bold, doneMode, forceRecurringBadge}={}){
 
   const main = document.createElement('div'); main.className='hsec-main';
   const line = document.createElement('div'); line.className='hsec-line';
+  const titleSpan = document.createElement('span'); titleSpan.className='hsec-line-title'; titleSpan.textContent = it.title;
+  line.appendChild(titleSpan);
   if(it.recurringId || it.calRecurring || forceRecurringBadge){
     const rb = document.createElement('span'); rb.className='recurring-badge'; rb.textContent='정기';
     line.appendChild(rb);
   }
-  line.appendChild(document.createTextNode(it.title));
   main.appendChild(line);
   if(it.memo){ const m=document.createElement('div'); m.className='hsec-memo'; m.textContent=it.memo; main.appendChild(m); }
   row.appendChild(main);
@@ -1360,8 +1363,7 @@ function buildMiniCalendar(allowCollapse, showSummary){
       const maxShow = 2;
       dayEvents.slice(0, maxShow).forEach(it=>{
         const chip = document.createElement('div');
-        chip.className = 'cal-summary-chip';
-        chip.style.background = it.calendar==='work' ? 'var(--work)' : 'var(--personal)';
+        chip.className = 'cal-summary-chip ' + (it.calendar==='work' ? 'work' : 'personal');
         chip.textContent = it.title;
         chip.title = it.title;
         summaryWrap.appendChild(chip);
@@ -2191,30 +2193,7 @@ document.getElementById('bottomNav').addEventListener('click', e=>{
 });
 document.getElementById('fabAdd').addEventListener('click', ()=> openItemSheet(null));
 
-function renderFavorites(){
-  const el = document.getElementById('screenFavorites');
-  el.innerHTML = '';
-  let list = items.filter(it=>it.important && matchesFilter(it));
-  list = list.sort((a,b)=> (a.startDate||'9999').localeCompare(b.startDate||'9999'));
 
-  const box = document.createElement('div'); box.className='hsec'; box.style.background='#fffaf0';
-  const header = document.createElement('div'); header.className='hsec-header'; header.style.cursor='default';
-  header.innerHTML = `<span class="hsec-title"><span class="hsec-icon" style="background:#f5b40033;">⭐</span>즐겨찾기${list.length>0?`<span class="hsec-count" style="background:#f5b40033; color:#b8860b;">${list.length}</span>`:''}</span>`;
-  box.appendChild(header);
-
-  const body = document.createElement('div'); body.className='hsec-body';
-  if(list.length===0){
-    const e = document.createElement('div'); e.className='empty-mini'; e.textContent='별표(☆)를 눌러 즐겨찾기에 추가해보세요.';
-    body.appendChild(e);
-  } else {
-    list.forEach(it=>{
-      const label = it.calendar==='personal' ? personalDateTimeLabel(it) : compactDateLabel(it.startDate);
-      body.appendChild(buildHomeRow(it, {leftLabel: label}));
-    });
-  }
-  box.appendChild(body);
-  el.appendChild(box);
-}
 
 /* ---------------- 건강 프로젝트 ---------------- */
 function monthKeyOf(dateStr){ return (dateStr||'').slice(0,7); } // 'YYYY-MM'
@@ -2844,17 +2823,15 @@ function renderAll(){
   document.getElementById('screenHome').hidden = currentTab!=='home';
   document.getElementById('screenSchedule').hidden = currentTab!=='schedule';
   document.getElementById('screenTodo').hidden = currentTab!=='todo';
-  document.getElementById('screenFavorites').hidden = currentTab!=='favorites';
   document.getElementById('screenSettings').hidden = currentTab!=='settings';
   document.getElementById('screenRecurring').hidden = currentTab!=='recurring';
   document.getElementById('screenNews').hidden = currentTab!=='news';
   document.getElementById('screenHealth').hidden = currentTab!=='health';
-  document.getElementById('chips').hidden = (currentTab==='settings' || currentTab==='recurring' || currentTab==='favorites' || currentTab==='news' || currentTab==='health');
+  document.getElementById('chips').hidden = (currentTab==='settings' || currentTab==='recurring' || currentTab==='news' || currentTab==='health');
 
   if(currentTab==='home') renderHome();
   else if(currentTab==='schedule') renderSchedule();
   else if(currentTab==='todo') renderTodo();
-  else if(currentTab==='favorites') renderFavorites();
   else if(currentTab==='settings') renderSettings();
   else if(currentTab==='recurring') renderRecurringPage();
   else if(currentTab==='news') renderNews();
