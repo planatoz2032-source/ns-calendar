@@ -833,21 +833,26 @@ async function refreshFromServer(manual){
   syncStatus = 'syncing'; if(currentTab==='settings') renderSettings();
   try{
     const data = await apiList();
+    // "일정(items) 개수 보호" 여부만 별도로 판단함. 이 판단 때문에 수면/식사/운동 등
+    // 건강기록 동기화까지 통째로 건너뛰지 않도록, items 갱신 여부와 건강기록 갱신은 분리함.
+    let itemsProtected = false;
     if(items.length > 0 && data.items.length < items.length){
       if(!manual){
-        console.warn('서버 데이터가 로컬보다 적어 자동 동기화를 건너뜁니다. (기존 데이터 보호)');
-        syncStatus = 'idle'; if(currentTab==='settings') renderSettings();
-        return;
+        console.warn('서버의 일정(items) 개수가 로컬보다 적어 일정만 자동 동기화를 건너뜁니다. (기존 데이터 보호. 건강기록/식사/운동 기록은 계속 동기화됩니다)');
+        itemsProtected = true;
+      } else {
+        const proceed = confirm(
+          '지금 이 기기에는 '+items.length+'개 항목이 있는데, 서버에는 '+data.items.length+'개뿐이에요.\n'+
+          '이대로 진행하면 이 기기에만 있던 항목이 사라질 수 있어요.\n\n'+
+          '일정을 계속 진행할까요? (취소해도 수면/식사/운동 기록 등 나머지는 정상적으로 동기화돼요. "로컬 데이터를 서버로 올리기"를 먼저 해보세요)'
+        );
+        itemsProtected = !proceed;
       }
-      const proceed = confirm(
-        '지금 이 기기에는 '+items.length+'개 항목이 있는데, 서버에는 '+data.items.length+'개뿐이에요.\n'+
-        '이대로 진행하면 이 기기에만 있던 항목이 사라질 수 있어요.\n\n'+
-        '계속 진행할까요? (취소하면 아무 것도 바뀌지 않아요. "로컬 데이터를 서버로 올리기"를 먼저 해보세요)'
-      );
-      if(!proceed){ syncStatus='idle'; if(currentTab==='settings') renderSettings(); return; }
     }
-    items = data.items;
-    recurringTemplates = data.recurring;
+    if(!itemsProtected){
+      items = data.items;
+      recurringTemplates = data.recurring;
+    }
     exerciseLogs = data.exerciseLogs || [];
     mealLogs = data.mealLogs || [];
     sleepLogs = data.sleepLogs || [];
@@ -869,7 +874,7 @@ async function refreshFromServer(manual){
     saveAll(); persistRecurring(); persistExerciseLogs(); persistMealLogs(); persistSleepLogs();
     syncStatus = 'idle';
     renderAll();
-    if(manual) alert('동기화 완료 (항목 '+items.length+'개)');
+    if(manual) alert('동기화 완료 (항목 '+items.length+'개)'+(itemsProtected ? '\n※ 일정(items)은 기기 보호 때문에 건너뛰었어요. 수면/식사/운동 기록은 반영됐어요.' : ''));
   }catch(e){
     console.error(e);
     syncStatus = 'error'; syncErrorMsg = e.message;
