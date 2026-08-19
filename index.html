@@ -17,6 +17,8 @@
     --todo-bg:#fef3e2;
     --purple:#7c3aed;
     --purple-bg:#f0eafd;
+    --brown:#8b5e34;
+    --brown-bg:#f0e6da;
     --done:#9aa0ab;
     --bg:#f0f2f5;
     --card:#fff;
@@ -179,7 +181,7 @@
   .tag.personal{background:var(--personal-bg); color:var(--personal);}
   .tag.todo{background:var(--todo-bg); color:var(--todo);}
 
-  .person-tag{font-size:9.5px; padding:1px 5px; border-radius:4px; font-weight:700; background:var(--purple-bg); color:var(--purple); flex:0 0 auto; align-self:flex-start; white-space:nowrap;}
+  .person-tag{font-size:9.5px; padding:1px 5px; border-radius:4px; font-weight:700; flex:0 0 auto; align-self:flex-start; white-space:nowrap;}
   .tag.recurring{background:#fdf1e2; color:#b6650a;}
   .recurring-box{border:1px solid #f3d9ad; background:#fffaf0; border-radius:14px; padding:2px 10px 6px; margin-bottom:16px;}
   .recurring-box .day-label{color:#b6650a;}
@@ -408,7 +410,7 @@
     </div>
 
     <div class="field" id="f-person-field" style="display:none;">
-      <label>구분 (누구 일인가요?)</label>
+      <label>구분 (NS/AZ/HM/SJ)</label>
       <select id="f-person" style="width:100%; padding:10px 12px; border-radius:10px; border:1px solid var(--border); font-size:15px; background:#fafafa;"></select>
     </div>
 
@@ -652,8 +654,33 @@ if(items === null){
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
 if(settings.homeCollapsed === undefined) settings.homeCollapsed = true;
 if(!settings.homeSections) settings.homeSections = {work_todo:true, personal_event:true, personal_todo:true};
-if(!settings.personalCategories) settings.personalCategories = [
-  {id:'me', label:'나'}, {id:'son', label:'아들'}, {id:'family', label:'가족'}
+if(!settings.personalCategories){
+  settings.personalCategories = [
+    {id:'ns', label:'NS', color:'var(--personal)', bg:'var(--personal-bg)'},
+    {id:'az', label:'AZ', color:'var(--purple)', bg:'var(--purple-bg)'},
+    {id:'hm', label:'HM', color:'var(--work)', bg:'var(--work-bg)'},
+    {id:'sj', label:'SJ', color:'var(--brown)', bg:'var(--brown-bg)'}
+  ];
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+// 예전 기본 구분(나/아들/가족)을 아직 그대로 쓰고 있으면(=한 번도 직접 수정 안 했으면) 새 NS/AZ/HM/SJ로 자동 교체
+else if(settings.personalCategories.length===3 && settings.personalCategories.every(c=>['me','son','family'].indexOf(c.id)!==-1)){
+  settings.personalCategories = [
+    {id:'ns', label:'NS', color:'var(--personal)', bg:'var(--personal-bg)'},
+    {id:'az', label:'AZ', color:'var(--purple)', bg:'var(--purple-bg)'},
+    {id:'hm', label:'HM', color:'var(--work)', bg:'var(--work-bg)'},
+    {id:'sj', label:'SJ', color:'var(--brown)', bg:'var(--brown-bg)'}
+  ];
+  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+}
+// 새로 추가하는 구분(카테고리)에 색이 지정 안 돼 있으면 순서대로 돌려가며 배정해주는 기본 팔레트
+const PERSON_CAT_COLOR_PALETTE = [
+  {color:'var(--personal)', bg:'var(--personal-bg)'},
+  {color:'var(--purple)', bg:'var(--purple-bg)'},
+  {color:'var(--work)', bg:'var(--work-bg)'},
+  {color:'var(--brown)', bg:'var(--brown-bg)'},
+  {color:'#e5484d', bg:'#fbe4e4'},
+  {color:'#c2860a', bg:'#faf0d9'}
 ];
 
 const RECURRING_KEY = 'ns_recurring_templates_v1';
@@ -782,30 +809,6 @@ async function apiSaveMeal(meal){ return (await apiPost({action:'saveMeal', meal
 async function apiDeleteMeal(id){ return apiPost({action:'deleteMeal', id}); }
 async function apiSaveSleep(log){ return (await apiPost({action:'saveSleep', log})).log; }
 async function apiDeleteSleep(id){ return apiPost({action:'deleteSleep', id}); }
-async function apiDebugSleep(){
-  const url = settings.scriptUrl + '?action=debugSleep&secret=' + encodeURIComponent(settings.scriptSecret);
-  const res = await fetch(url);
-  const data = await res.json();
-  if(!data.ok) throw new Error(data.error || 'debugSleep 실패');
-  return data;
-}
-async function runSleepDiagnosis(){
-  if(!apiReady()){ alert('먼저 설정에서 Apps Script 연동을 완료해주세요.'); return; }
-  try{
-    const d = await apiDebugSleep();
-    const rowsText = (d.rows||[]).map(r=> `#${r.rowNum} id=${r.id} 날짜=${r.날짜} 취침=${r.취침시간} 기상=${r.기상시간} upd=${r.updatedAt}`).join('\n');
-    const msg =
-      '시트 목록: ' + (d.allSheetNames||[]).join(', ') + '\n' +
-      '수면기록 시트 찾음: ' + (d.sleepSheetFound ? 'O' : '❌ 못찾음!') + ' (이름: ' + d.sleepSheetName + ')\n' +
-      'lastRow=' + d.lastRow + ', 데이터 행 수=' + d.dataRowCount + '\n\n' +
-      '=== 전체 행 목록 ===\n' + (rowsText || '(행 없음)');
-    console.log('[수면진단]', d);
-    alert(msg);
-  }catch(e){
-    alert('진단 실패: ' + e.message);
-  }
-}
-
 let syncStatus = 'idle'; // idle | syncing | error
 let syncErrorMsg = '';
 
@@ -1079,11 +1082,29 @@ function personLabel(personId){
   const c = (settings.personalCategories||[]).find(x=>x.id===personId);
   return c ? c.label : null;
 }
-// 일정(이벤트) 카드의 색깔 바/태그 정보: 개인 일정에 특정 가족구성원이 지정돼 있으면
-// kiro 디자인처럼 보라색 + 이름으로, 아니면 회사=파란/개인=초록의 기본 태그로
+function personCategory(personId){
+  return (settings.personalCategories||[]).find(x=>x.id===personId) || null;
+}
+// 제목이 "AZ 강의", "AZ:강의", "AZ-강의", "AZ강의"처럼 구분 이름(NS/AZ/HM/SJ)으로 시작하면
+// 구글 캘린더에 직접 적은 일정이라도 그 구분으로 자동 인식해줌 (제목 텍스트가 최우선)
+function detectCategoryFromTitle(title){
+  if(!title) return null;
+  const cats = settings.personalCategories||[];
+  for(const c of cats){
+    const label = (c.label||'').trim();
+    if(!label) continue;
+    const esc = label.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    const re = new RegExp('^' + esc + '\\s*[:\\-]?\\s*(?=\\S)', 'i');
+    if(re.test(title)) return c;
+  }
+  return null;
+}
+// 일정(이벤트)/할일 카드의 색깔 바·태그 정보: 개인 일정은 제목에 적힌 구분(우선) 또는 선택된 구분에 따라
+// NS/AZ/HM/SJ 색으로, 회사 일정은 파란색 "회사" 태그로, 구분이 없으면 기본 구분(첫 번째, 보통 NS)으로 표시
 function eventTagInfo(it){
-  if(it.calendar==='personal' && personLabel(it.person)){
-    return {bar:'var(--purple)', bg:'var(--purple-bg)', color:'var(--purple)', label:personLabel(it.person)};
+  if(it.calendar==='personal'){
+    const cat = detectCategoryFromTitle(it.title) || personCategory(it.person) || (settings.personalCategories||[])[0];
+    if(cat) return {bar:cat.color, bg:cat.bg, color:cat.color, label:cat.label};
   }
   if(it.calendar==='work') return {bar:'var(--work)', bg:'var(--work-bg)', color:'var(--work)', label:'회사'};
   return {bar:'var(--personal)', bg:'var(--personal-bg)', color:'var(--personal)', label:'개인'};
@@ -1327,8 +1348,10 @@ function buildHomeRow(it, {leftLabel, bold, doneMode, forceRecurringBadge}={}){
   const line = document.createElement('div'); line.className='hsec-line';
   const titleSpan = document.createElement('span'); titleSpan.className='hsec-line-title'; titleSpan.textContent = it.title;
   line.appendChild(titleSpan);
-  if(it.calendar==='personal' && it.type==='todo' && personLabel(it.person)){
-    const pt = document.createElement('span'); pt.className='person-tag'; pt.textContent = personLabel(it.person);
+  if(it.calendar==='personal' && it.type==='todo' && (detectCategoryFromTitle(it.title) || personCategory(it.person))){
+    const cat = detectCategoryFromTitle(it.title) || personCategory(it.person);
+    const pt = document.createElement('span'); pt.className='person-tag'; pt.textContent = cat.label;
+    pt.style.background = cat.bg; pt.style.color = cat.color;
     line.appendChild(pt);
   }
   if(it.recurringId || it.calRecurring || forceRecurringBadge){
@@ -1880,8 +1903,10 @@ function renderItemRow(it){
 
   const body = document.createElement('div'); body.className='body';
   const title = document.createElement('div'); title.className='title'; title.textContent = it.title;
-  if(it.calendar==='personal' && it.type==='todo' && personLabel(it.person)){
-    const pt = document.createElement('span'); pt.className='person-tag'; pt.textContent = personLabel(it.person);
+  if(it.calendar==='personal' && it.type==='todo' && (detectCategoryFromTitle(it.title) || personCategory(it.person))){
+    const cat = detectCategoryFromTitle(it.title) || personCategory(it.person);
+    const pt = document.createElement('span'); pt.className='person-tag'; pt.textContent = cat.label;
+    pt.style.background = cat.bg; pt.style.color = cat.color;
     title.appendChild(pt);
   }
   body.appendChild(title);
@@ -2175,11 +2200,11 @@ function renderSettings(){
     </div>
 
     <div class="field" style="margin-top:20px;">
-      <label>개인 할일 구분 (나 / 아들 / 가족 등)</label>
+      <label>개인 일정/할일 구분 (NS / AZ / HM / SJ)</label>
       <div id="personCatList" style="display:flex; flex-wrap:wrap; gap:6px; margin-top:6px;"></div>
       <button class="add-recurring-btn" style="margin-top:10px;" onclick="addPersonCategory()">+ 구분 추가</button>
     </div>
-    <div class="settings-note">개인 할일 등록 시 이 구분을 선택하면 할일 맨 앞에 태그로 표시돼요. 이름을 눌러 수정하거나 🗑로 삭제할 수 있어요.</div>
+    <div class="settings-note">개인 일정/할일 등록 시 이 구분을 선택하면 색깔 배지로 표시돼요. 이름을 눌러 수정하거나 🗑로 삭제할 수 있어요.</div>
 
     <div class="field" style="margin-top:20px;">
       <label>Apps Script 연동 (구글시트+캘린더 동기화)</label>
@@ -2201,11 +2226,7 @@ function renderSettings(){
     <div class="sheet-actions" style="margin-top:8px;">
       <button class="btn-ghost" onclick="uploadAllLocalToServer()" style="width:100%;">이 기기의 로컬 데이터를 서버로 올리기</button>
     </div>
-    <div class="settings-note">연동을 처음 켜신 직후, 이전부터 이 기기에 있던 항목(회사/개인 할일 등)이 시트에 안 보이면 위 버튼을 한 번 눌러주세요.</div>
-    <div class="sheet-actions" style="margin-top:8px;">
-      <button class="btn-ghost" onclick="runSleepDiagnosis()" style="width:100%;">🩺 수면기록 진단 (서버 상태 직접 확인)</button>
-    </div>
-    <div class="settings-note">수면기록이 구글시트에 안 보일 때 눌러보세요. 서버가 실제로 보고 있는 시트 목록과 데이터 행을 그대로 보여줘요.</div>` : ''}
+    <div class="settings-note">연동을 처음 켜신 직후, 이전부터 이 기기에 있던 항목(회사/개인 할일 등)이 시트에 안 보이면 위 버튼을 한 번 눌러주세요.</div>` : ''}
 
     <div class="sheet-actions" style="margin-top:20px;">
       <button class="btn-primary" onclick="saveSettings()" style="width:100%;">저장</button>
@@ -2221,7 +2242,9 @@ function renderPersonCatList(){
   wrap.innerHTML = '';
   (settings.personalCategories||[]).forEach(c=>{
     const chip = document.createElement('span');
-    chip.style.cssText = 'display:inline-flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--border); border-radius:999px; padding:5px 6px 5px 12px; font-size:13px;';
+    chip.style.cssText = 'display:inline-flex; align-items:center; gap:6px; background:var(--card); border:1px solid var(--border); border-radius:999px; padding:5px 6px 5px 8px; font-size:13px;';
+    const dot = document.createElement('span'); dot.style.cssText = 'width:9px; height:9px; border-radius:50%; flex:0 0 auto;'; dot.style.background = c.color || 'var(--sub)';
+    chip.appendChild(dot);
     const label = document.createElement('span'); label.textContent = c.label; label.style.cursor='pointer';
     label.onclick = ()=> editPersonCategory(c.id);
     chip.appendChild(label);
@@ -2232,9 +2255,11 @@ function renderPersonCatList(){
   });
 }
 function addPersonCategory(){
-  const label = prompt('추가할 구분 이름을 입력해주세요 (예: 나, 아들, 딸, 가족)');
+  const label = prompt('추가할 구분 이름을 입력해주세요 (예: NS, AZ, HM, SJ)');
   if(!label || !label.trim()) return;
-  settings.personalCategories.push({id:uid(), label:label.trim()});
+  const idx = (settings.personalCategories||[]).length;
+  const preset = PERSON_CAT_COLOR_PALETTE[idx % PERSON_CAT_COLOR_PALETTE.length];
+  settings.personalCategories.push({id:uid(), label:label.trim(), color:preset.color, bg:preset.bg});
   saveSettingsToStorage();
   renderPersonCatList();
 }
