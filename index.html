@@ -138,7 +138,7 @@
   .hsec-cb{-webkit-appearance:none; appearance:none; width:19px; height:19px; border-radius:50%; border:2px solid var(--border); background:#fff; flex:0 0 19px; margin:0; cursor:pointer; position:relative;}
   .hsec-cb:checked{background:var(--personal); border-color:var(--personal);}
   .hsec-cb:checked::after{content:'✓'; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-size:10px; color:#fff;}
-  .hsec-bar{width:3.5px; align-self:stretch; border-radius:3px; flex:0 0 3.5px;}
+  .hsec-bar{width:6px; align-self:stretch; border-radius:3px; flex:0 0 6px;}
   /* 날짜 구분선: 글자 뒤로 얇은 줄이 이어지는 kiro의 .dlabel 스타일 */
   .hsec-date-group{font-size:11.5px; font-weight:700; color:var(--sub); margin:10px 2px 6px; display:flex; align-items:center; gap:6px;}
   .hsec-date-group::after{content:''; flex:1; height:1px; background:var(--border);}
@@ -164,7 +164,7 @@
     background:var(--card); border-radius:12px; padding:9px 11px; margin-bottom:6px;
     display:flex; align-items:center; gap:9px; box-shadow:0 1px 6px rgba(0,0,0,0.07);
   }
-  .item .bar{width:3.5px; align-self:stretch; border-radius:3px; flex:0 0 3.5px;}
+  .item .bar{width:6px; align-self:stretch; border-radius:3px; flex:0 0 6px;}
   .bar.work{background:var(--work);}
   .bar.personal{background:var(--personal);}
   .bar.todo{background:var(--todo);}
@@ -360,7 +360,6 @@
 <div id="appShell">
 <header id="topHeader"></header>
 <div id="offlineBanner" hidden></div>
-<div class="chips" id="chips"></div>
 <div class="viewtabs" id="viewtabs" hidden></div>
 
 <main class="screen" id="screenHome"></main>
@@ -388,20 +387,11 @@
     <h2 id="itemSheetTitle">새 항목</h2>
 
     <div class="field">
-      <label>구분</label>
-      <div class="seg" id="calSeg">
-        <button data-v="work" class="active">회사</button>
-        <button data-v="personal">개인</button>
-      </div>
-    </div>
-
-    <div class="field">
       <label>종류</label>
       <div class="seg" id="typeSeg">
         <button data-v="event" class="active" id="typeSegEvent">일정</button>
         <button data-v="todo">할일</button>
       </div>
-      <div class="settings-note" id="typeSegNote" style="display:none; margin-top:6px;">회사 캘린더는 양방향 연동이 어려워 할일만 사용해요.</div>
     </div>
 
     <div class="field">
@@ -465,14 +455,6 @@
 <div class="sheet-backdrop" id="recurringBackdrop">
   <div class="sheet">
     <h2 id="recurringSheetTitle">정기 할일 추가</h2>
-
-    <div class="field">
-      <label>구분</label>
-      <div class="seg" id="rCalSeg">
-        <button data-v="work" class="active">회사</button>
-        <button data-v="personal">개인</button>
-      </div>
-    </div>
 
     <div class="field">
       <label>반복 주기</label>
@@ -642,13 +624,16 @@ const DEFAULT_ITEMS = [
 ];
 
 let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+// 회사 관련 기능은 완전히 제거됨 - 예전에 저장된 회사 일정/할일을 전부 정리하고, 서버에도 삭제를 반영함
+// (스크립트 맨 아래, settings와 apiDeleteItem이 준비된 다음에 서버 삭제를 실제로 호출함)
+let _removedWorkItems = [];
 if(items === null){
-  items = DEFAULT_ITEMS.map(x=>({...x}));
+  items = DEFAULT_ITEMS.map(x=>({...x})).filter(it => it.calendar!=='work');
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 } else {
-  // 회사 캘린더(일정) 기능은 제거됨 - 예전에 저장된 회사 일정은 정리
   const beforeLen = items.length;
-  items = items.filter(it => !(it.calendar==='work' && it.type==='event'));
+  _removedWorkItems = items.filter(it => it.calendar==='work');
+  items = items.filter(it => it.calendar!=='work');
   if(items.length !== beforeLen) localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
@@ -686,6 +671,12 @@ const PERSON_CAT_COLOR_PALETTE = [
 const RECURRING_KEY = 'ns_recurring_templates_v1';
 let recurringTemplates = JSON.parse(localStorage.getItem(RECURRING_KEY) || '[]');
 function persistRecurring(){ localStorage.setItem(RECURRING_KEY, JSON.stringify(recurringTemplates)); }
+// 회사 관련 정기 할일도 전부 정리 (서버 삭제는 스크립트 맨 아래에서 반영)
+let _removedWorkRecurring = recurringTemplates.filter(t=>t.calendar==='work');
+if(_removedWorkRecurring.length){
+  recurringTemplates = recurringTemplates.filter(t=>t.calendar!=='work');
+  persistRecurring();
+}
 
 const EXERCISE_KEY = 'ns_exercise_logs_v1';
 let exerciseLogs = JSON.parse(localStorage.getItem(EXERCISE_KEY) || '[]');
@@ -708,7 +699,7 @@ let ganttScale = 'month'; // week | month | year
 let ganttFilters = {personal_event:true, work_todo:true, personal_todo:true};
 let selectedDate = todayStr(); // for home mini-cal + day view + month agenda
 let editingId = null;
-let f_cal = 'work';
+let f_cal = 'personal'; // 회사 캘린더 기능은 제거됨 - 이제 항상 'personal'
 let f_type = 'event';
 
 function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -1163,23 +1154,12 @@ function shiftMiniMonth(dir){
   renderAll();
 }
 
-function renderChips(){
-  const el = document.getElementById('chips');
-  el.innerHTML = '';
-  [['all','전체'],['work','회사'],['personal','개인']].forEach(([v,label])=>{
-    const b = document.createElement('button');
-    b.className = 'chip'+(currentFilter===v?' active':'');
-    b.textContent = label;
-    b.onclick = ()=>{ currentFilter=v; renderAll(); };
-    el.appendChild(b);
-  });
-}
 function renderViewTabs(){
   const el = document.getElementById('viewtabs');
   if(currentTab!=='schedule'){ el.hidden = true; return; }
   el.hidden = false;
   el.innerHTML = '';
-  [['day','일'],['week','주'],['month','월'],['gantt','차트']].forEach(([v,label])=>{
+  [['day','일'],['week','주'],['month','월']].forEach(([v,label])=>{
     const b = document.createElement('button');
     b.className = (scheduleView===v?'active':'');
     b.textContent = label;
@@ -1199,19 +1179,8 @@ function renderHome(){
   el.appendChild(buildHomeWeekStrip());
   el.appendChild(buildHealthHomeCard());
 
-  const showWork = currentFilter!=='personal';
-  const showPersonal = currentFilter!=='work';
-
-  if(showWork){
-    // accentColor는 실제 색상 값(hex)으로 넘겨야 아이콘 배경의 투명도(+ '26' 접미사)가 제대로 먹음 -
-    // 예전엔 'var(--todo)'처럼 넘겨서 "var(--todo)26"이라는 잘못된 CSS 값이 되어 아이콘 배경색이 안 먹었음
-    el.appendChild(buildHomeTodoSection('work', '회사 할일', ICON_TODO, '#f59e0b'));
-  }
-  if(showPersonal){
-    el.appendChild(buildHomeEventSection());
-    // kiro 디자인에서는 개인 할일이 회사 할일과 구분되게 보라색 계열을 씀
-    el.appendChild(buildHomeTodoSection('personal', '개인 할일', ICON_TODO, '#7c3aed'));
-  }
+  el.appendChild(buildHomeEventSection());
+  el.appendChild(buildHomeTodoSection('personal', '개인 할일', ICON_TODO, '#7c3aed'));
 }
 
 /** 홈 화면 상단의 얇은 주간 스트립 (kiro 디자인). 예전엔 접었다 폈다 하는 큰 달 전체 그리드였는데,
@@ -1579,7 +1548,6 @@ function buildMiniCalendar(allowCollapse, showSummary){
   if(!collapsed){
     const legend = document.createElement('div'); legend.className='cal-legend';
     legend.innerHTML = `
-      <span><span class="legend-dot" style="background:var(--work)"></span>회사 일정</span>
       <span><span class="legend-dot" style="background:var(--personal)"></span>개인 일정</span>
       <span><span class="legend-dot" style="background:var(--todo)"></span>할일</span>`;
     wrap.appendChild(legend);
@@ -1866,9 +1834,7 @@ function renderTodo(){
   recurringList.forEach(it=> rBox.appendChild(renderItemRow(it)));
   el.appendChild(rBox);
 
-  const groups = [];
-  if(currentFilter!=='personal') groups.push(['work','회사 할일']);
-  if(currentFilter!=='work') groups.push(['personal','개인 할일']);
+  const groups = [['personal','개인 할일']];
 
   groups.forEach(([cal,label])=>{
     const g = document.createElement('div'); g.className='day-group';
@@ -2003,7 +1969,7 @@ function ensureRecurringInstances(){
 }
 
 let editingRecurringId = null;
-let r_cal = 'work';
+let r_cal = 'personal'; // 회사 캘린더 기능은 제거됨 - 이제 항상 'personal'
 let r_unit = 'month';
 
 function openRecurringSheet(id){
@@ -2012,30 +1978,24 @@ function openRecurringSheet(id){
   document.getElementById('rDeleteBtn').style.display = id ? 'block':'none';
   if(id){
     const t = recurringTemplates.find(x=>x.id===id);
-    r_cal = t.calendar; r_unit = t.unit || (t.repeat==='yearly' ? 'year' : 'month');
+    r_cal = 'personal'; r_unit = t.unit || (t.repeat==='yearly' ? 'year' : 'month');
     document.getElementById('r-title').value = t.title;
     document.getElementById('r-interval').value = t.intervalCount || 1;
     document.getElementById('r-day').value = t.day;
     document.getElementById('r-month').value = t.month || '';
     document.getElementById('r-memo').value = t.memo || '';
   } else {
-    r_cal = 'work'; r_unit = 'month';
+    r_cal = 'personal'; r_unit = 'month';
     document.getElementById('r-title').value = '';
     document.getElementById('r-interval').value = '1';
     document.getElementById('r-day').value = '';
     document.getElementById('r-month').value = '';
     document.getElementById('r-memo').value = '';
   }
-  updateRCalSegUI(); updateRUnitSegUI();
+  updateRUnitSegUI();
   document.getElementById('recurringBackdrop').classList.add('open');
 }
 function closeRecurringSheet(){ document.getElementById('recurringBackdrop').classList.remove('open'); }
-
-document.getElementById('rCalSeg').addEventListener('click', e=>{
-  const btn = e.target.closest('button'); if(!btn) return;
-  r_cal = btn.dataset.v; updateRCalSegUI();
-});
-function updateRCalSegUI(){ [...document.getElementById('rCalSeg').children].forEach(b=>b.classList.toggle('active', b.dataset.v===r_cal)); }
 
 document.getElementById('rUnitSeg').addEventListener('click', e=>{
   const btn = e.target.closest('button'); if(!btn) return;
@@ -2128,7 +2088,6 @@ function renderRecurringPage(){
   el.appendChild(addBtn);
 
   const groups = [
-    ['work','📋 회사'],
     ['personal','📝 개인'],
   ];
 
@@ -2298,7 +2257,7 @@ function openItemSheet(id, preset){
 
   if(id){
     const it = items.find(x=>x.id===id);
-    f_cal = it.calendar; f_type = it.type;
+    f_cal = 'personal'; f_type = it.type;
     document.getElementById('f-title').value = it.title;
     document.getElementById('f-startDate').value = it.startDate || '';
     document.getElementById('f-startTime').value = it.startTime || '';
@@ -2308,7 +2267,7 @@ function openItemSheet(id, preset){
     updateFieldVisibility();
     populatePersonSelect(it.person);
   } else {
-    f_cal = (preset && preset.cal) || (currentFilter==='personal' ? 'personal' : 'work');
+    f_cal = 'personal';
     f_type = (preset && preset.type) || 'event';
     document.getElementById('f-title').value = '';
     document.getElementById('f-startDate').value = selectedDate;
@@ -2318,16 +2277,10 @@ function openItemSheet(id, preset){
     document.getElementById('f-memo').value = '';
     updateFieldVisibility();
   }
-  updateCalSegUI(); updateTypeSegUI();
+  updateTypeSegUI();
   document.getElementById('itemBackdrop').classList.add('open');
 }
 function closeItemSheet(){ document.getElementById('itemBackdrop').classList.remove('open'); }
-
-document.getElementById('calSeg').addEventListener('click', e=>{
-  const btn = e.target.closest('button'); if(!btn) return;
-  f_cal = btn.dataset.v; updateCalSegUI(); updateFieldVisibility();
-});
-function updateCalSegUI(){ [...document.getElementById('calSeg').children].forEach(b=>b.classList.toggle('active', b.dataset.v===f_cal)); }
 
 document.getElementById('typeSeg').addEventListener('click', e=>{
   const btn = e.target.closest('button'); if(!btn) return;
@@ -2336,14 +2289,8 @@ document.getElementById('typeSeg').addEventListener('click', e=>{
 function updateTypeSegUI(){ [...document.getElementById('typeSeg').children].forEach(b=>b.classList.toggle('active', b.dataset.v===f_type)); }
 
 function updateFieldVisibility(){
-  const isWork = (f_cal==='work');
-  document.getElementById('typeSegEvent').style.display = isWork ? 'none' : 'block';
-  document.getElementById('typeSegNote').style.display = isWork ? 'block' : 'none';
-  if(isWork && f_type==='event'){ f_type='todo'; updateTypeSegUI(); }
-
-  const showPerson = (f_cal==='personal');
-  document.getElementById('f-person-field').style.display = showPerson ? 'block' : 'none';
-  if(showPerson) populatePersonSelect();
+  document.getElementById('f-person-field').style.display = 'block';
+  populatePersonSelect();
 }
 function populatePersonSelect(selectedId){
   const sel = document.getElementById('f-person');
@@ -3033,7 +2980,6 @@ document.getElementById('screenNews').addEventListener('click', e=>{
 /* ---------------- master render ---------------- */
 function renderAll(){
   renderHeader();
-  renderChips();
   renderViewTabs();
   updateOfflineBanner();
 
@@ -3044,7 +2990,6 @@ function renderAll(){
   document.getElementById('screenRecurring').hidden = currentTab!=='recurring';
   document.getElementById('screenNews').hidden = currentTab!=='news';
   document.getElementById('screenHealth').hidden = currentTab!=='health';
-  document.getElementById('chips').hidden = (currentTab==='settings' || currentTab==='recurring' || currentTab==='news' || currentTab==='health');
 
   if(currentTab==='home') renderHome();
   else if(currentTab==='schedule') renderSchedule();
@@ -3062,6 +3007,11 @@ function renderAll(){
 
 ensureRecurringInstances();
 renderAll();
+// 정리된 회사 관련 일정/할일/정기할일을 서버(구글시트)에도 삭제로 반영 (연동돼 있을 때만)
+if(apiReady()){
+  _removedWorkItems.forEach(it=> apiDeleteItem(it.id).catch(()=>{}));
+  _removedWorkRecurring.forEach(t=> apiDeleteRecurring(t.id).catch(()=>{}));
+}
 if(apiReady()) refreshFromServer(false);
 </script>
 </body>
