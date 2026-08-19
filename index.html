@@ -782,6 +782,29 @@ async function apiSaveMeal(meal){ return (await apiPost({action:'saveMeal', meal
 async function apiDeleteMeal(id){ return apiPost({action:'deleteMeal', id}); }
 async function apiSaveSleep(log){ return (await apiPost({action:'saveSleep', log})).log; }
 async function apiDeleteSleep(id){ return apiPost({action:'deleteSleep', id}); }
+async function apiDebugSleep(){
+  const url = settings.scriptUrl + '?action=debugSleep&secret=' + encodeURIComponent(settings.scriptSecret);
+  const res = await fetch(url);
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || 'debugSleep 실패');
+  return data;
+}
+async function runSleepDiagnosis(){
+  if(!apiReady()){ alert('먼저 설정에서 Apps Script 연동을 완료해주세요.'); return; }
+  try{
+    const d = await apiDebugSleep();
+    const rowsText = (d.rows||[]).map(r=> `#${r.rowNum} id=${r.id} 날짜=${r.날짜} 취침=${r.취침시간} 기상=${r.기상시간} upd=${r.updatedAt}`).join('\n');
+    const msg =
+      '시트 목록: ' + (d.allSheetNames||[]).join(', ') + '\n' +
+      '수면기록 시트 찾음: ' + (d.sleepSheetFound ? 'O' : '❌ 못찾음!') + ' (이름: ' + d.sleepSheetName + ')\n' +
+      'lastRow=' + d.lastRow + ', 데이터 행 수=' + d.dataRowCount + '\n\n' +
+      '=== 전체 행 목록 ===\n' + (rowsText || '(행 없음)');
+    console.log('[수면진단]', d);
+    alert(msg);
+  }catch(e){
+    alert('진단 실패: ' + e.message);
+  }
+}
 
 let syncStatus = 'idle'; // idle | syncing | error
 let syncErrorMsg = '';
@@ -2178,7 +2201,11 @@ function renderSettings(){
     <div class="sheet-actions" style="margin-top:8px;">
       <button class="btn-ghost" onclick="uploadAllLocalToServer()" style="width:100%;">이 기기의 로컬 데이터를 서버로 올리기</button>
     </div>
-    <div class="settings-note">연동을 처음 켜신 직후, 이전부터 이 기기에 있던 항목(회사/개인 할일 등)이 시트에 안 보이면 위 버튼을 한 번 눌러주세요.</div>` : ''}
+    <div class="settings-note">연동을 처음 켜신 직후, 이전부터 이 기기에 있던 항목(회사/개인 할일 등)이 시트에 안 보이면 위 버튼을 한 번 눌러주세요.</div>
+    <div class="sheet-actions" style="margin-top:8px;">
+      <button class="btn-ghost" onclick="runSleepDiagnosis()" style="width:100%;">🩺 수면기록 진단 (서버 상태 직접 확인)</button>
+    </div>
+    <div class="settings-note">수면기록이 구글시트에 안 보일 때 눌러보세요. 서버가 실제로 보고 있는 시트 목록과 데이터 행을 그대로 보여줘요.</div>` : ''}
 
     <div class="sheet-actions" style="margin-top:20px;">
       <button class="btn-primary" onclick="saveSettings()" style="width:100%;">저장</button>
