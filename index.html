@@ -636,34 +636,16 @@ if(items === null){
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
 if(settings.homeCollapsed === undefined) settings.homeCollapsed = true;
 if(!settings.homeSections) settings.homeSections = {work_todo:true, personal_event:true, personal_todo:true};
-if(!settings.personalCategories){
-  settings.personalCategories = [
-    {id:'ns', label:'NS', color:'var(--personal)', bg:'var(--personal-bg)'},
-    {id:'az', label:'AZ', color:'var(--purple)', bg:'var(--purple-bg)'},
-    {id:'hm', label:'HM', color:'var(--work)', bg:'var(--work-bg)'},
-    {id:'sj', label:'SJ', color:'var(--brown)', bg:'var(--brown-bg)'}
-  ];
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-}
-// 예전 기본 구분(나/아들/가족)을 아직 그대로 쓰고 있으면(=한 번도 직접 수정 안 했으면) 새 NS/AZ/HM/SJ로 자동 교체
-else if(settings.personalCategories.length===3 && settings.personalCategories.every(c=>['me','son','family'].indexOf(c.id)!==-1)){
-  settings.personalCategories = [
-    {id:'ns', label:'NS', color:'var(--personal)', bg:'var(--personal-bg)'},
-    {id:'az', label:'AZ', color:'var(--purple)', bg:'var(--purple-bg)'},
-    {id:'hm', label:'HM', color:'var(--work)', bg:'var(--work-bg)'},
-    {id:'sj', label:'SJ', color:'var(--brown)', bg:'var(--brown-bg)'}
-  ];
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-}
-// 새로 추가하는 구분(카테고리)에 색이 지정 안 돼 있으면 순서대로 돌려가며 배정해주는 기본 팔레트
-const PERSON_CAT_COLOR_PALETTE = [
-  {color:'var(--personal)', bg:'var(--personal-bg)'},
-  {color:'var(--purple)', bg:'var(--purple-bg)'},
-  {color:'var(--work)', bg:'var(--work-bg)'},
-  {color:'var(--brown)', bg:'var(--brown-bg)'},
-  {color:'#e5484d', bg:'#fbe4e4'},
-  {color:'#c2860a', bg:'#faf0d9'}
+// 개인 일정/할일 구분(NS/AZ/HM/SJ)은 이제 제목 앞글자로만 자동 인식하고, 사용자가 직접 관리하는 화면도 없앴음.
+// 그래서 예전 버전에서 기기에 남아있던 값(색이 비어있거나 이름이 달랐던 경우 등)이 있어도 매번 아래 고정값으로
+// 덮어써서, 배지·바 색이 사라지거나 검게 보이는 문제가 다시는 생기지 않도록 함.
+settings.personalCategories = [
+  {id:'ns', label:'NS', color:'var(--personal)', bg:'var(--personal-bg)'},
+  {id:'az', label:'AZ', color:'var(--purple)', bg:'var(--purple-bg)'},
+  {id:'hm', label:'HM', color:'var(--work)', bg:'var(--work-bg)'},
+  {id:'sj', label:'SJ', color:'var(--brown)', bg:'var(--brown-bg)'}
 ];
+localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 
 const RECURRING_KEY = 'ns_recurring_templates_v1';
 let recurringTemplates = JSON.parse(localStorage.getItem(RECURRING_KEY) || '[]');
@@ -1288,13 +1270,10 @@ let doneSectionsOpen = {};
 
 function buildHomeRow(it, {leftLabel, bold, doneMode, forceRecurringBadge}={}){
   const row = document.createElement('div'); row.className='hsec-row'+(doneMode?' is-done':'');
-  if(it.type==='event'){
-    // kiro의 .ecard처럼, 일정 항목엔 체크박스 옆에 색깔 있는 세로 바를 넣어서 할일 카드와 구분되게 함
-    // 개인 일정에 가족구성원이 지정돼 있으면 보라색 바로 (예: 아들의 연세발달 일정)
-    const info = eventTagInfo(it);
-    const bar = document.createElement('div'); bar.className='hsec-bar'; bar.style.background=info.bar;
-    row.appendChild(bar);
-  }
+  // 일정/할일 모두 제목 앞글자(NS/AZ/HM/SJ) 기준 색깔 바를 붙여서 할일 탭과 동일하게 표시
+  const info = eventTagInfo(it);
+  const bar = document.createElement('div'); bar.className='hsec-bar'; bar.style.background=info.bar;
+  row.appendChild(bar);
   if(it.type==='todo'){
     const cb = document.createElement('input'); cb.type='checkbox'; cb.className='hsec-cb';
     cb.checked = !!doneMode;
@@ -1851,8 +1830,9 @@ function renderItemRow(it){
   const row = document.createElement('div');
   row.className = 'item' + (it.done?' done':'');
 
-  const bar = document.createElement('div'); bar.className='bar '+(it.type==='todo'?'todo':it.calendar);
-  if(it.type==='event') bar.style.background = eventTagInfo(it).bar;
+  // 일정이든 할일이든(정기 업무 포함) 항상 제목 앞글자(NS/AZ/HM/SJ) 기준 색으로 표시
+  const bar = document.createElement('div'); bar.className='bar';
+  bar.style.background = eventTagInfo(it).bar;
   row.appendChild(bar);
 
   if(it.type==='todo'){
@@ -2090,7 +2070,7 @@ function renderRecurringPage(){
 
   const groups = [
     ['monthly', '📅 일별 (매월 반복)', monthly],
-    ['yearly', '🗓️ 월별 (매년 반복)', yearly],
+    ['yearly', '☀️ 월별 (매년 반복)', yearly],
   ];
 
   groups.forEach(([key,label,list])=>{
