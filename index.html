@@ -1195,11 +1195,17 @@ function buildHomeWeekStrip(){
 
     const dayItems = items.filter(it=> isOnDate(it, dStr));
     const ddr = document.createElement('div'); ddr.className='ddr';
-    const hasWork = dayItems.some(it=>it.calendar==='work' && it.type==='event');
-    const hasPersonal = dayItems.some(it=>it.calendar==='personal' && it.type==='event');
+    // 일정은 이제 제목 앞글자(NS/AZ/HM/SJ/KM) 기준 색으로 점을 찍음 (선택된 날은 대비를 위해 흰 점)
+    const seenDotColors = new Set();
+    dayItems.filter(it=>it.type==='event').forEach(it=>{
+      const info = eventTagInfo(it);
+      if(seenDotColors.has(info.bar)) return;
+      seenDotColors.add(info.bar);
+      const dot=document.createElement('span'); dot.className='ddot';
+      dot.style.background = dStr===selectedDate?'#fff':info.bar; dot.style.opacity = dStr===selectedDate?'.7':'1';
+      ddr.appendChild(dot);
+    });
     const hasTodo = dayItems.some(it=>it.type==='todo');
-    if(hasWork){ const dot=document.createElement('span'); dot.className='ddot'; dot.style.background = dStr===selectedDate?'#fff':'var(--work)'; dot.style.opacity = dStr===selectedDate?'.7':'1'; ddr.appendChild(dot); }
-    if(hasPersonal){ const dot=document.createElement('span'); dot.className='ddot'; dot.style.background = dStr===selectedDate?'#fff':'var(--personal)'; dot.style.opacity = dStr===selectedDate?'.7':'1'; ddr.appendChild(dot); }
     if(hasTodo){ const dot=document.createElement('span'); dot.className='ddot'; dot.style.background = dStr===selectedDate?'#fff':'var(--todo)'; dot.style.opacity = dStr===selectedDate?'.7':'1'; ddr.appendChild(dot); }
     cell.appendChild(ddr);
 
@@ -1401,7 +1407,7 @@ function buildHomeEventSection(){
 
   const box = document.createElement('div'); box.className='hsec';
   const key = 'personal_event';
-  box.appendChild(homeSectionHeader(key, ICON_CAL, '개인 일정', list.length, '#0ea572'));
+  box.appendChild(homeSectionHeader(key, ICON_CAL, '일정', list.length, '#0ea572'));
 
   const open = settings.homeSections[key] !== false;
   if(open){
@@ -1494,7 +1500,9 @@ function buildMiniCalendar(allowCollapse, showSummary){
       const maxShow = 2;
       dayEvents.slice(0, maxShow).forEach(it=>{
         const chip = document.createElement('div');
-        chip.className = 'cal-summary-chip ' + (it.calendar==='work' ? 'work' : 'personal');
+        chip.className = 'cal-summary-chip';
+        const info = eventTagInfo(it);
+        chip.style.background = info.bg; chip.style.color = info.color;
         chip.textContent = it.title;
         chip.title = it.title;
         summaryWrap.appendChild(chip);
@@ -1507,11 +1515,14 @@ function buildMiniCalendar(allowCollapse, showSummary){
       cell.appendChild(summaryWrap);
     } else {
       const dots = document.createElement('div'); dots.className='cal-dots';
-      const hasWork = dayItems.some(it=>it.calendar==='work' && it.type==='event');
-      const hasPersonal = dayItems.some(it=>it.calendar==='personal' && it.type==='event');
+      const seenCalDotColors = new Set();
+      dayItems.filter(it=>it.type==='event').forEach(it=>{
+        const info = eventTagInfo(it);
+        if(seenCalDotColors.has(info.bar)) return;
+        seenCalDotColors.add(info.bar);
+        const dot=document.createElement('span'); dot.className='cal-dot'; dot.style.background=info.bar; dots.appendChild(dot);
+      });
       const hasTodo = dayItems.some(it=>it.type==='todo');
-      if(hasWork){ const dot=document.createElement('span'); dot.className='cal-dot'; dot.style.background='var(--work)'; dots.appendChild(dot); }
-      if(hasPersonal){ const dot=document.createElement('span'); dot.className='cal-dot'; dot.style.background='var(--personal)'; dots.appendChild(dot); }
       if(hasTodo){ const dot=document.createElement('span'); dot.className='cal-dot'; dot.style.background='var(--todo)'; dots.appendChild(dot); }
       cell.appendChild(dots);
     }
@@ -1523,7 +1534,7 @@ function buildMiniCalendar(allowCollapse, showSummary){
   if(!collapsed){
     const legend = document.createElement('div'); legend.className='cal-legend';
     legend.innerHTML = `
-      <span><span class="legend-dot" style="background:var(--personal)"></span>개인 일정</span>
+      <span><span class="legend-dot" style="background:var(--personal)"></span>일정</span>
       <span><span class="legend-dot" style="background:var(--todo)"></span>할일</span>`;
     wrap.appendChild(legend);
   }
