@@ -1795,17 +1795,19 @@ function renderTodo(){
   const el = document.getElementById('screenTodo');
   el.innerHTML = '';
 
-  // 상단: 정기 업무 블럭 (매월/매년 자동 생성된 할일만 모아서 표시)
+  // 상단: 정기 업무 블럭 (매월/매년 자동 생성된 할일만 모아서 표시) - 완료된 건 "완료됨" 토글 안으로
   let recurringList = items.filter(it=>it.type==='todo' && it.recurringId && matchesFilter(it));
-  recurringList = recurringList.sort((a,b)=> (a.done?1:0)-(b.done?1:0) || (a.startDate||'9999').localeCompare(b.startDate||'9999'));
+  const recurringNotDone = recurringList.filter(it=>!it.done).sort((a,b)=> (a.startDate||'9999').localeCompare(b.startDate||'9999'));
+  const recurringDone = recurringList.filter(it=>it.done).sort((a,b)=> (b.startDate||'').localeCompare(a.startDate||''));
   const rBox = document.createElement('div'); rBox.className='recurring-box';
   const rh = document.createElement('div'); rh.className='day-label'; rh.textContent='🔁 정기 업무';
   rBox.appendChild(rh);
-  if(recurringList.length===0){
+  if(recurringNotDone.length===0 && recurringDone.length===0){
     const e=document.createElement('div'); e.className='empty'; e.textContent='이번 달 정기 업무가 없어요.';
     rBox.appendChild(e);
   }
-  recurringList.forEach(it=> rBox.appendChild(renderItemRow(it)));
+  recurringNotDone.forEach(it=> rBox.appendChild(renderItemRow(it)));
+  buildItemDoneToggle('recurring_todo_done', recurringDone, rBox);
   el.appendChild(rBox);
 
   const groups = [['personal','개인 할일']];
@@ -1815,14 +1817,29 @@ function renderTodo(){
     const h = document.createElement('div'); h.className='day-label'; h.textContent = label;
     g.appendChild(h);
     let list = items.filter(it=>it.type==='todo' && it.calendar===cal && !it.recurringId);
-    list = list.sort((a,b)=> (a.done?1:0)-(b.done?1:0) || ((b.important?1:0)-(a.important?1:0)) || (a.startDate||'9999').localeCompare(b.startDate||'9999'));
-    if(list.length===0){
+    const notDone = list.filter(it=>!it.done).sort((a,b)=> ((b.important?1:0)-(a.important?1:0)) || (a.startDate||'9999').localeCompare(b.startDate||'9999'));
+    const doneList = list.filter(it=>it.done).sort((a,b)=> (b.startDate||'').localeCompare(a.startDate||''));
+    if(notDone.length===0 && doneList.length===0){
       const e=document.createElement('div'); e.className='empty'; e.textContent='할일이 없어요.';
       g.appendChild(e);
     }
-    list.forEach(it=> g.appendChild(renderItemRow(it)));
+    notDone.forEach(it=> g.appendChild(renderItemRow(it)));
+    buildItemDoneToggle(cal+'_todo_done', doneList, g);
     el.appendChild(g);
   });
+}
+
+// Todo 탭 전용: renderItemRow(.item 스타일) 행들을 "완료됨 N개 보기" 토글 뒤에 접어서 보여줌
+function buildItemDoneToggle(key, doneList, container){
+  if(doneList.length===0) return;
+  const toggleBtn = document.createElement('button'); toggleBtn.className='hsec-add';
+  const isOpen = !!doneSectionsOpen[key];
+  toggleBtn.textContent = (isOpen?'▾ ':'▸ ')+'완료됨 '+doneList.length+'개 보기';
+  toggleBtn.onclick = ()=>{ doneSectionsOpen[key] = !doneSectionsOpen[key]; renderAll(); };
+  container.appendChild(toggleBtn);
+  if(isOpen){
+    doneList.forEach(it=> container.appendChild(renderItemRow(it)));
+  }
 }
 
 /* ---------------- shared item row (used in month agenda + todo tab) ---------------- */
@@ -2063,10 +2080,11 @@ function renderRecurringPage(){
   addBtn.onclick = ()=> openRecurringSheet(null);
   el.appendChild(addBtn);
 
+  // 매월(N=1) 해야 하는 것부터 먼저, 그 다음 N개월/N년마다 하는 것 순으로 묶어서 정렬
   const monthly = recurringTemplates.filter(t=>!isYearlyRecurring(t))
-    .slice().sort((a,b)=> (a.day||0)-(b.day||0));
+    .slice().sort((a,b)=> ((a.intervalCount||1)-(b.intervalCount||1)) || ((a.day||0)-(b.day||0)));
   const yearly = recurringTemplates.filter(t=>isYearlyRecurring(t))
-    .slice().sort((a,b)=> ((a.month||0)-(b.month||0)) || ((a.day||0)-(b.day||0)));
+    .slice().sort((a,b)=> ((a.intervalCount||1)-(b.intervalCount||1)) || ((a.month||0)-(b.month||0)) || ((a.day||0)-(b.day||0)));
 
   const groups = [
     ['monthly', '📅 일별 (매월 반복)', monthly],
@@ -2343,23 +2361,48 @@ function renderHealthPage(){
   el.appendChild(cmpCard);
 
   const avgSleep = avgSleepMinutes(thisKey);
-  const sleepCard = document.createElement('div'); sleepCard.className='health-card';
+  const lastAvgSleep = avgSleepMinutes(lastKey);
   const sleepQualityColor = avgSleep===0 ? 'var(--sub)' : (avgSleep>=420 ? '#0f8a5f' : (avgSleep>=360 ? '#b6650a' : '#d84343'));
+  const sleepCard = document.createElement('div'); sleepCard.className='health-card';
   sleepCard.innerHTML = `
     <div class="health-card-title">${monthLabel(thisKey)} 평균 수면시간</div>
     <div class="health-goal-row" style="margin-bottom:0;">
       <span class="health-goal-value" style="color:${sleepQualityColor};">${avgSleep>0 ? fmtHoursMinutes(avgSleep) : '기록 없음'}</span>
-      <button class="health-add-btn sleep" style="flex:0 0 auto; padding:8px 12px;" onclick="openSleepSheet(null)">+ 수면 기록</button>
     </div>
   `;
   el.appendChild(sleepCard);
 
+  // 운동처럼 수면도 이번달 대비 지난달 비교 카드로 보여줌
+  if(avgSleep>0 || lastAvgSleep>0){
+    const sleepMax = Math.max(avgSleep, lastAvgSleep, 1);
+    const sleepDiffPct = lastAvgSleep>0 ? Math.round((avgSleep-lastAvgSleep)/lastAvgSleep*100) : (avgSleep>0?100:0);
+    const sleepCmpCard = document.createElement('div'); sleepCmpCard.className='health-card';
+    sleepCmpCard.innerHTML = `
+      <div class="health-card-title">지난달과 비교 (수면)</div>
+      <div class="health-cmp-row">
+        <span class="health-cmp-label">이번 달</span>
+        <div class="health-cmp-track"><div class="health-cmp-fill this" style="width:${avgSleep/sleepMax*100}%;"></div></div>
+        <span class="health-cmp-value">${avgSleep>0?fmtHoursMinutes(avgSleep):'0시간'}</span>
+      </div>
+      <div class="health-cmp-row">
+        <span class="health-cmp-label">지난 달</span>
+        <div class="health-cmp-track"><div class="health-cmp-fill last" style="width:${lastAvgSleep/sleepMax*100}%;"></div></div>
+        <span class="health-cmp-value">${lastAvgSleep>0?fmtHoursMinutes(lastAvgSleep):'0시간'}</span>
+      </div>
+      <div class="health-cmp-diff ${sleepDiffPct>=0?'up':'down'}">${sleepDiffPct>=0?'▲':'▼'} 지난달보다 ${Math.abs(sleepDiffPct)}% ${sleepDiffPct>=0?'더 잤어요':'덜 잤어요'}</div>
+    `;
+    el.appendChild(sleepCmpCard);
+  }
+
+  // 수면/운동/식사 기록 추가 버튼을 한 줄에 나란히 표시
   const addRow = document.createElement('div'); addRow.className='health-add-row';
+  const addSleepBtn = document.createElement('button'); addSleepBtn.className='health-add-btn sleep'; addSleepBtn.textContent='+ 수면 기록 추가';
+  addSleepBtn.onclick = ()=> openSleepSheet(null);
   const addExBtn = document.createElement('button'); addExBtn.className='health-add-btn'; addExBtn.textContent='+ 운동 기록 추가';
   addExBtn.onclick = ()=> openExerciseSheet(null);
   const addMealBtn = document.createElement('button'); addMealBtn.className='health-add-btn meal'; addMealBtn.textContent='+ 식사 기록 추가';
   addMealBtn.onclick = ()=> openMealSheet(null);
-  addRow.appendChild(addExBtn); addRow.appendChild(addMealBtn);
+  addRow.appendChild(addSleepBtn); addRow.appendChild(addExBtn); addRow.appendChild(addMealBtn);
   el.appendChild(addRow);
 
   // 운동기록 테이블
