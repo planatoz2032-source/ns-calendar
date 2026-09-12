@@ -110,7 +110,6 @@
   .cal-dots{display:flex; gap:2px; position:absolute; bottom:3px;}
   .cal-summary{display:flex; flex-direction:column; gap:1px; width:100%; align-items:stretch;}
   .cal-summary-chip{font-size:7.5px; font-weight:700; line-height:1.25; border-radius:2px; padding:1px 2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; width:100%; margin-bottom:1px;}
-  .cal-summary-chip.work{background:var(--work-bg); color:var(--work);}
   .cal-summary-chip.personal{background:var(--personal-bg); color:#0a7a56;}
   .cal-summary-more{font-size:8px; color:var(--sub); padding-left:2px;}
   .cal-dot{width:5px; height:5px; border-radius:50%;}
@@ -118,7 +117,7 @@
   .cal-legend span{display:inline-flex; align-items:center; gap:4px;}
   .legend-dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
 
-  /* home sections (회사 할일 / 개인 일정 / 개인 할일) */
+  /* home sections (개인 일정 / 개인 할일) */
   .star-btn{background:none; border:none; cursor:pointer; font-size:14px; line-height:1; padding:0 2px; flex:0 0 auto; color:#d0d3da;}
   .star-btn.important{color:#f5b400;}
   .empty-mini{font-size:12px; color:var(--sub); padding:10px 4px;}
@@ -171,7 +170,6 @@
     display:flex; align-items:center; gap:9px; box-shadow:0 1px 6px rgba(0,0,0,0.07);
   }
   .item .bar{width:6px; align-self:stretch; border-radius:3px; flex:0 0 6px;}
-  .bar.work{background:var(--work);}
   .bar.personal{background:var(--personal);}
   .bar.todo{background:var(--todo);}
   .item.done{opacity:0.6;}
@@ -183,7 +181,6 @@
   .item .memo-preview{font-size:11px; color:var(--sub); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:3px;}
   .star-btn.big{font-size:13px; padding:0 2px;}
   .tag{font-size:9.5px; padding:1px 5px; border-radius:4px; font-weight:700;}
-  .tag.work{background:var(--work-bg); color:var(--work);}
   .tag.personal{background:var(--personal-bg); color:var(--personal);}
   .tag.todo{background:var(--todo-bg); color:var(--todo);}
 
@@ -221,7 +218,6 @@
 
   /* day timeline */
   .allday-chip{display:inline-block; font-size:12px; padding:5px 9px; border-radius:8px; margin:2px 4px 2px 0;}
-  .allday-chip.work{background:#e8f0fe; color:var(--work);}
   .allday-chip.personal{background:#e3faf1; color:var(--personal);}
   .allday-chip.todo{background:#fef3e2; color:var(--todo);}
   .timeline{position:relative; background:var(--card); border-radius:12px; box-shadow:0 1px 6px rgba(0,0,0,0.07); margin-top:0; overflow:hidden;}
@@ -230,7 +226,6 @@
   .tl-hour{flex:0 0 42px; font-size:10px; color:var(--sub); padding:10px 5px; text-align:right;}
   .tl-slot{flex:1; position:relative; padding:5px 7px 5px 4px;}
   .tl-event{border-left:3px solid; border-radius:0 7px 7px 0; padding:4px 7px; font-size:12px; margin:2px 0; color:var(--text);}
-  .tl-event.work{background:var(--work-bg); border-color:var(--work);}
   .tl-event.personal{background:var(--personal-bg); border-color:var(--personal);}
   .tlev-title{font-size:12px; font-weight:700; color:var(--text);}
   .tlev-meta{font-size:10px; color:var(--sub); margin-top:1px;}
@@ -666,7 +661,6 @@ const STORAGE_KEY = 'ns_dashboard_items_v2';
 const SETTINGS_KEY = 'ns_dashboard_settings_v1';
 
 const DEFAULT_ITEMS = [
-  {id:'seed-w5', type:'todo', calendar:'work', title:'백본팀 정기미팅 자료 준비', startDate:'2026-08-11', startTime:null, endDate:null, endTime:null, memo:'', done:false},
   {id:'seed-p1', type:'event', calendar:'personal', title:'칼럼_파파님', startDate:'2026-08-03', startTime:null, endDate:'2026-08-03', endTime:null, memo:'Google 캘린더에서 가져옴', done:false},
   {id:'seed-p2', type:'event', calendar:'personal', title:'수영님, 민정님 점심', startDate:'2026-08-04', startTime:'12:00', endDate:'2026-08-04', endTime:'13:00', memo:'Google 캘린더에서 가져옴', done:false},
   {id:'seed-p3', type:'event', calendar:'personal', title:'이엠365', startDate:'2026-08-06', startTime:null, endDate:'2026-08-06', endTime:null, memo:'Google 캘린더에서 가져옴', done:false},
@@ -678,21 +672,13 @@ const DEFAULT_ITEMS = [
 ];
 
 let items = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
-// 회사 관련 기능은 완전히 제거됨 - 예전에 저장된 회사 일정/할일을 전부 정리하고, 서버에도 삭제를 반영함
-// (스크립트 맨 아래, settings와 apiDeleteItem이 준비된 다음에 서버 삭제를 실제로 호출함)
-let _removedWorkItems = [];
 if(items === null){
-  items = DEFAULT_ITEMS.map(x=>({...x})).filter(it => it.calendar!=='work');
+  items = DEFAULT_ITEMS.map(x=>({...x}));
   localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-} else {
-  const beforeLen = items.length;
-  _removedWorkItems = items.filter(it => it.calendar==='work');
-  items = items.filter(it => it.calendar!=='work');
-  if(items.length !== beforeLen) localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
 }
 let settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}');
 if(settings.homeCollapsed === undefined) settings.homeCollapsed = true;
-if(!settings.homeSections) settings.homeSections = {work_todo:true, personal_event:true, personal_todo:true};
+if(!settings.homeSections) settings.homeSections = {personal_event:true, personal_todo:true};
 // 개인 일정/할일 구분(NS/AZ/HM/SJ/KM)은 이제 제목 앞글자로만 자동 인식하고, 사용자가 직접 관리하는 화면도 없앴음.
 // 그래서 예전 버전에서 기기에 남아있던 값(색이 비어있거나 이름이 달랐던 경우 등)이 있어도 매번 아래 고정값으로
 // 덮어써서, 배지·바 색이 사라지거나 검게 보이는 문제가 다시는 생기지 않도록 함.
@@ -708,12 +694,6 @@ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 const RECURRING_KEY = 'ns_recurring_templates_v1';
 let recurringTemplates = JSON.parse(localStorage.getItem(RECURRING_KEY) || '[]');
 function persistRecurring(){ localStorage.setItem(RECURRING_KEY, JSON.stringify(recurringTemplates)); }
-// 회사 관련 정기 할일도 전부 정리 (서버 삭제는 스크립트 맨 아래에서 반영)
-let _removedWorkRecurring = recurringTemplates.filter(t=>t.calendar==='work');
-if(_removedWorkRecurring.length){
-  recurringTemplates = recurringTemplates.filter(t=>t.calendar!=='work');
-  persistRecurring();
-}
 
 const EXERCISE_KEY = 'ns_exercise_logs_v1';
 let exerciseLogs = JSON.parse(localStorage.getItem(EXERCISE_KEY) || '[]');
@@ -796,18 +776,18 @@ function updateOfflineBanner(){
 }
 
 async function apiList(retriesLeft){
-  if(retriesLeft===undefined) retriesLeft = 2;
+  if(retriesLeft===undefined) retriesLeft = 3; // 서버 락 대기(서버가 바빠요)에 좀 더 버틸 수 있게 여유를 둠
   const url = settings.scriptUrl + '?action=list&secret=' + encodeURIComponent(settings.scriptSecret);
   const res = await fetch(url);
   const data = await res.json();
   if(!data.ok){
-    if(data.retryable && retriesLeft>0){ await sleep(900); return apiList(retriesLeft-1); }
+    if(data.retryable && retriesLeft>0){ await sleep(1200); return apiList(retriesLeft-1); }
     throw new Error(data.error || 'list 실패');
   }
   return data; // {items, recurring}
 }
 async function apiPost(body, retriesLeft){
-  if(retriesLeft===undefined) retriesLeft = 2;
+  if(retriesLeft===undefined) retriesLeft = 4; // 서버 락 대기(서버가 바빠요)에 좀 더 버틸 수 있게 여유를 둠
   body = Object.assign({}, body, {secret: settings.scriptSecret});
   let text;
   try{
@@ -1207,14 +1187,11 @@ function detectCategoryFromTitle(title){
   }
   return null;
 }
-// 일정(이벤트)/할일 카드의 색깔 바·태그 정보: 개인 일정은 제목에 적힌 구분(우선) 또는 선택된 구분에 따라
-// NS/AZ/HM/SJ/KM 색으로, 회사 일정은 파란색 "회사" 태그로, 구분이 없으면 기본 구분(첫 번째, 보통 NS)으로 표시
+// 일정(이벤트)/할일 카드의 색깔 바·태그 정보: 제목에 적힌 구분(우선) 또는 선택된 구분에 따라
+// NS/AZ/HM/SJ/KM 색으로, 구분이 없으면 기본 구분(첫 번째, 보통 NS)으로 표시
 function eventTagInfo(it){
-  if(it.calendar==='personal'){
-    const cat = detectCategoryFromTitle(it.title) || personCategory(it.person) || (settings.personalCategories||[])[0];
-    if(cat) return {bar:cat.color, bg:cat.bg, color:cat.color, label:cat.label};
-  }
-  if(it.calendar==='work') return {bar:'var(--work)', bg:'var(--work-bg)', color:'var(--work)', label:'회사'};
+  const cat = detectCategoryFromTitle(it.title) || personCategory(it.person) || (settings.personalCategories||[])[0];
+  if(cat) return {bar:cat.color, bg:cat.bg, color:cat.color, label:cat.label};
   return {bar:'var(--personal)', bg:'var(--personal-bg)', color:'var(--personal)', label:'개인'};
 }
 // 홈 화면 박스용 축약 날짜 포맷: "08.05(수)"
@@ -1281,7 +1258,7 @@ function renderViewTabs(){
 }
 
 /* ---------------- HOME ---------------- */
-// kiro 디자인에서 쓰는 섹션 아이콘 (이모지 대신 실제 선 아이콘) - 회사/개인 할일, 개인 일정에서 재사용
+// kiro 디자인에서 쓰는 섹션 아이콘 (이모지 대신 실제 선 아이콘) - 개인 할일, 개인 일정에서 재사용
 const ICON_TODO = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>`;
 const ICON_CAL = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
 
@@ -1920,7 +1897,7 @@ function renderItemRow(it){
     tag.classList.add('recurring'); tag.textContent='정기 업무';
   } else if(it.type==='todo'){
     tag.classList.add('todo');
-    tag.textContent = it.calendar==='work' ? '회사 할일' : '개인 할일';
+    tag.textContent = '개인 할일';
   } else {
     const info = eventTagInfo(it);
     tag.style.background = info.bg; tag.style.color = info.color; tag.textContent = info.label;
@@ -2212,7 +2189,7 @@ function renderSettings(){
     <div class="sheet-actions" style="margin-top:8px;">
       <button class="btn-ghost" onclick="uploadAllLocalToServer()" style="width:100%;">이 기기의 로컬 데이터를 서버로 올리기</button>
     </div>
-    <div class="settings-note">연동을 처음 켜신 직후, 이전부터 이 기기에 있던 항목(회사/개인 할일 등)이 시트에 안 보이면 위 버튼을 한 번 눌러주세요.</div>` : ''}
+    <div class="settings-note">연동을 처음 켜신 직후, 이전부터 이 기기에 있던 항목이 시트에 안 보이면 위 버튼을 한 번 눌러주세요.</div>` : ''}
 
     <div class="sheet-actions" style="margin-top:20px;">
       <button class="btn-primary" onclick="saveSettings()" style="width:100%;">저장</button>
@@ -3116,11 +3093,6 @@ function renderAll(){
 
 ensureRecurringInstances();
 renderAll();
-// 정리된 회사 관련 일정/할일/정기할일을 서버(구글시트)에도 삭제로 반영 (연동돼 있을 때만)
-if(apiReady()){
-  _removedWorkItems.forEach(it=> apiDeleteItem(it.id).catch(()=>{}));
-  _removedWorkRecurring.forEach(t=> apiDeleteRecurring(t.id).catch(()=>{}));
-}
 if(apiReady()) refreshFromServer(false);
 </script>
 </body>
